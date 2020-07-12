@@ -1,0 +1,9 @@
+- Server on LocalHost x
+- Database x
+- Connect Database to Server and Display x
+- Stub Function to pass requests to server
+- Parse requests
+- Check validation of requests, reject invalid requests
+- Count and store statistics per customer per hour
+- Create an endpoint to get the statistics: for a specific customer + a specific day. 
+	The response must also contain the total number of requests for that day
