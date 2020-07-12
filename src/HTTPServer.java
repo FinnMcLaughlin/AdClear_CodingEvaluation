@@ -7,13 +7,13 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.Statement;
-import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import com.sun.net.httpserver.HttpContext;
 import com.sun.net.httpserver.HttpExchange;
@@ -21,10 +21,6 @@ import com.sun.net.httpserver.HttpServer;
 		
 public class HTTPServer {
 
-	
-	//String timeStamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
-	
-	
 	/* Main that creates localhost HttpServer using port 8085,
 	 sets the handler function to handle requests sent to the server,
 	 and starts server */
@@ -35,14 +31,21 @@ public class HTTPServer {
 			HttpContext context = server.createContext("/");
 		    context.setHandler(HTTPServer::handleRequest);
 		    server.start();
-		    //server.stop(0);
+		    
+		    Timer timer = new Timer();
+		    TimerTask updateHourlyStats = new TimerTask() {
+		    	public void run() {
+		    		updateHourlyStatsTable();
+		    	}
+		    };
+		    
+		    timer.schedule (updateHourlyStats, 1000*60*60l, 1000*60*60);
 		}
 		catch(Exception e){
 			System.out.println(e);
-		}	
-		
+		}
 	}
-	
+		
 	/* Function to handle the requests sent to the server */
 	private static void handleRequest(HttpExchange exchange) throws IOException {		
 		
@@ -63,7 +66,7 @@ public class HTTPServer {
 			
 			String requestBodyString = buf.toString();
 			
-			exchange.sendResponseHeaders(200, requestBodyString.getBytes().length);//response code and length
+			exchange.sendResponseHeaders(200, requestBodyString.getBytes().length);
 		    OutputStream os = exchange.getResponseBody();
 		    os.write(requestBodyString.getBytes());
 		    os.close();
@@ -81,14 +84,13 @@ public class HTTPServer {
 			boolean validRequest = validateRequestBody(params);
 			System.out.println(validRequest);
 			logRequest(params, validRequest);
+			System.out.println("-----------------------------------------");
 		}
 		else {
 			System.out.println("Not POST Request");
 		}
 	 }
-	
-	
-	
+
 	
 	/* Function to format the request body string into a parameter/value Hashmap */
 	public static Map<String, String> formatRequestBody(String reqBody){
@@ -101,7 +103,7 @@ public class HTTPServer {
 		Map<String, String> info = new HashMap<String, String>();
 		
 		int paramCount = reqBody.length() - reqBody.replace("&", "").length() + 1;
-		System.out.println("Paramter Count: " + paramCount);
+//		System.out.println("Paramter Count: " + paramCount);
 		
 		reqBody = reqBody.replace("=&", "=null&");
 		
@@ -129,9 +131,7 @@ public class HTTPServer {
 		// is blacklisted		
 		
 		boolean validRequest = true;
-		
-		System.out.println("-----------------------------------------");
-		
+				
 		//Malformed JSON
 		for(Map.Entry<String, String> parameter : params.entrySet()) {			
 			if(parameter.getValue().compareTo("null") == 0) {
@@ -174,19 +174,15 @@ public class HTTPServer {
 		// condition(s) passed into the function, and returns the data returned
 		// from the specified column also passed into the function
 		
-		System.out.println("Establishing Connection to Database...");	
 		try (Connection connection = DriverManager.getConnection("jdbc:postgresql://localhost:5432/postgres", "postgres", "password"))
 		{
 			
-			System.out.println("Connection Established");
-			//System.out.println(cond);
 			String reqQuery = "SELECT * FROM " + table + " WHERE " + cond + ";";
 			
 			Statement stmt = connection.createStatement();
 	        ResultSet rs = stmt.executeQuery(reqQuery);
 	        String response = "";
 	
-	        //System.out.println("Iterating through Query Result");
 	        while ( rs.next() )
 	        {
 	        	response = response + rs.getString(column);
@@ -274,5 +270,45 @@ public class HTTPServer {
 	        System.out.println(e);
 	        e.printStackTrace();
 	    }
+	}
+	
+	/* Function to update hourly_stats table every hour */
+	public static void updateHourlyStatsTable() {
+		// Extracts the data from the requestLog table, iterates through it and adds the
+		// data to the hourly_stats table with the current timestamp before removing the
+		// data from the requetsLog table
+		
+		String timeStamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+		System.out.println(timeStamp);
+		
+		try (Connection connection = DriverManager.getConnection("jdbc:postgresql://localhost:5432/postgres", "postgres", "password"))
+		{
+				String reqQuery = "SELECT * FROM requestLog";
+				
+				Statement selectStmt = connection.createStatement();
+		        ResultSet selectResult = selectStmt.executeQuery(reqQuery);
+		        
+		        while ( selectResult.next() )
+		        {
+		        	String insertQuery = "INSERT INTO hourly_stats VALUES( nextval('hourly_stats_seq'), " + selectResult.getString("customerID") + ","
+		        			+ "cast(\'" + timeStamp + "\' AS TIMESTAMP), " + selectResult.getString("request_count") + "," + selectResult.getString("invalid_count") + ");";
+		        
+		        	PreparedStatement insertStmt = connection.prepareStatement(insertQuery);
+			        int insertResult = insertStmt.executeUpdate();
+			        if(insertResult > 0) {
+			        	System.out.println("Inserted Customer " + selectResult.getString("customerID") + " successfully into hourly_stats");
+			        }
+			        
+			        String deleteQuery = "DELETE FROM requestLog WHERE customerID = " + selectResult.getString("customerID") +";";
+			        PreparedStatement deleteStmt = connection.prepareStatement(deleteQuery);
+			        int deleteResult = deleteStmt.executeUpdate();
+			        if(deleteResult > 0) {
+			        	System.out.println("Customer " + selectResult.getString("customerID") + " successfully removed from requestLog\n");
+			        }
+		        }   
+		}
+		catch(Exception e) {
+			System.out.println(e);
+		}
 	}
 }
