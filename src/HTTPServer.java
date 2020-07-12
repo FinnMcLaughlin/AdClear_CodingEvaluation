@@ -6,6 +6,7 @@ import java.net.InetSocketAddress;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
@@ -64,6 +65,81 @@ public class HTTPServer {
 		return info;
 	}
 	
+	/* Function to validate the request body data */
+	public static boolean validateRequestBody(Map<String, String> params) {
+		boolean invalidRequest = false;
+		
+		System.out.println("-----------------------------------------");
+		
+		//Malformed JSON
+		for(Map.Entry<String, String> parameter : params.entrySet()) {			
+			if(parameter.getValue().compareTo("null") == 0) {
+				invalidRequest = true;
+				break;
+			}
+		}
+		
+		//Not in Customer Table || Disabled Customer
+		if(!invalidRequest) {
+			String customerCheck = getQueryResult("Customer", "id=" + params.get("customerID"), "active");
+			if(customerCheck.compareTo("") == 0 || customerCheck.compareTo("0") == 0) {
+				invalidRequest = true;
+			}
+		}
+		
+		//Blacklisted IP
+		if(!invalidRequest) {
+			String ipCheck = getQueryResult("ip_blacklist", "ip=" + params.get("remoteIP").replace(".", ""), "ip");
+			if(ipCheck.compareTo("") != 0) {
+				invalidRequest = true;
+			}
+		}
+		
+		//Blacklist User Agent
+		if(!invalidRequest) {
+			String userAgentCheck = getQueryResult("ua_blacklist", "ua= \'" + params.get("userID") + "\'", "ua");
+			if(userAgentCheck.compareTo("") != 0) {
+				invalidRequest = true;
+			}
+		}
+		
+		
+		return invalidRequest;
+	}
+	
+	/* Function to connect to the PSQL database and execute queries */
+	public static String getQueryResult(String table, String cond, String column) {
+		System.out.println("Establishing Connection to Database...");	
+		try (Connection connection = DriverManager.getConnection("jdbc:postgresql://localhost:5432/postgres", "postgres", "password"))
+		{
+			
+			System.out.println("Connection Established");
+			//System.out.println(cond);
+			String reqQuery = "SELECT * FROM " + table + " WHERE " + cond + ";";
+			
+			Statement stmt = connection.createStatement();
+	        ResultSet rs = stmt.executeQuery(reqQuery);
+	        String response = "";
+	
+	        //System.out.println("Iterating through Query Result");
+	        while ( rs.next() )
+	        {
+	        	response = response + rs.getString(column);
+	        }	
+	        
+	        //System.out.println("->" + response);
+	        
+	        return response;
+	
+		}
+		catch (Exception e) {
+	        System.out.println("Connection failure.");
+	        e.printStackTrace();
+	        
+	        return "Connection Failure";
+	    }
+	}
+	
 	/* Function to handle the requests sent to the server */
 	private static void handleRequest(HttpExchange exchange) throws IOException {		
 		
@@ -91,43 +167,18 @@ public class HTTPServer {
 			
 			System.out.println(buf.toString());
 			
-			Map<String, String> info = new HashMap<String, String>();
-			info = formatRequestBody(requestBodyString);
-			System.out.println("CustomerID: " + info.get("customerID"));
-			System.out.println("TagID: " + info.get("tagID"));
-			System.out.println("UserID: " + info.get("userID"));
-			System.out.println("RemoteIP: " + info.get("remoteIP"));
-			System.out.println("Timestamp: " + info.get("timestamp"));
+			Map<String, String> params = new HashMap<String, String>();
+			params = formatRequestBody(requestBodyString);
+			System.out.println("CustomerID: " + params.get("customerID"));
+			System.out.println("TagID: " + params.get("tagID"));
+			System.out.println("UserID: " + params.get("userID"));
+			System.out.println("RemoteIP: " + params.get("remoteIP"));
+			System.out.println("Timestamp: " + params.get("timestamp"));
 			
+			System.out.println(validateRequestBody(params));
 		}
 		else {
 			System.out.println("Not POST Request");
 		}
-		
-		
-	   /*System.out.println("Establishing Connection to Database...");	
-	   try (Connection connection = DriverManager.getConnection("jdbc:postgresql://localhost:5432/postgres",
-                    "postgres", "password")) {
-		 
-			System.out.println("Connection Established");
-			
-			Statement stmt = connection.createStatement();
-	        ResultSet rs = stmt.executeQuery( "SELECT * FROM Customer;" );
-	        String response = "";
-	
-	        while ( rs.next() ) {
-	        	System.out.println("Name: " + rs.getString("name") + " | Active: " + rs.getInt("active"));
-	        	response = response + "Name: " + rs.getString("name") + " | Active: " + rs.getInt("active") + "\n";
-	        }
-	        
-		    exchange.sendResponseHeaders(200, response.getBytes().length);//response code and length
-			    OutputStream os = exchange.getResponseBody();
-			    os.write(response.getBytes());
-			    os.close();
-	 
-	        }catch (Exception e) {
-	            System.out.println("Connection failure.");
-	        e.printStackTrace();
-        }*/
 	 }
 }
