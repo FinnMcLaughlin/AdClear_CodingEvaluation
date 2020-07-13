@@ -30,6 +30,8 @@ public class HTTPServer {
 			HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 8085), 0);
 			HttpContext context = server.createContext("/");
 		    context.setHandler(HTTPServer::handleRequest);
+		    HttpContext testContext = server.createContext("/test");
+		    testContext.setHandler(HTTPServer::endpointHandleRequest);
 		    server.start();
 		    
 		    Timer timer = new Timer();
@@ -44,6 +46,48 @@ public class HTTPServer {
 		catch(Exception e){
 			System.out.println(e);
 		}
+	}
+	
+	/* Function to handle the endpoint for customer request statistics based on a specified date */
+	private static void endpointHandleRequest(HttpExchange exchange) throws IOException {
+		Map<String, String> params = new HashMap<String, String>();
+		String parameterString = exchange.getRequestURI().getQuery();
+		String usageString = "Usage: localhost:<port>/test?id=<customerID>&date=<yyyy-mm-dd>";
+		String response = usageString;
+		
+		if(parameterString != null) {
+			params = formatRequestBody(exchange.getRequestURI().getQuery());
+			String param_custID = params.get("id");
+			String param_date = params.get("date");
+			
+			if(param_custID != null && param_date != null) {				
+				try (Connection connection = DriverManager.getConnection("jdbc:postgresql://localhost:5432/postgres", "postgres", "password"))
+				{
+					String reqQuery = "SELECT * FROM hourly_stats INNER JOIN customer on (hourly_stats.customer_id = customer.id)"
+							+ " WHERE hourly_stats.customer_id=" + param_custID
+							+ " AND time::date = \'" + param_date + "\';";
+					
+					Statement selectStmt = connection.createStatement();
+			        ResultSet selectResult = selectStmt.executeQuery(reqQuery);
+			        
+			        response = "";
+			        while(selectResult.next()) {
+			        	response = response + "(" + selectResult.getString("time") + ") " + selectResult.getString("name") + " -> Valid Requests: " + selectResult.getString("request_count") + " | Invalid Requests: " + selectResult.getString("invalid_count") + "\n";
+			        }
+				}
+				catch(Exception e) {
+					System.out.println(e);
+				}
+			}
+			else {
+				response = usageString;
+			}			
+		}
+		
+		exchange.sendResponseHeaders(200, response.length());
+	    OutputStream os = exchange.getResponseBody();
+	    os.write(response.getBytes());
+	    os.close();
 	}
 		
 	/* Function to handle the requests sent to the server */
@@ -85,9 +129,6 @@ public class HTTPServer {
 			System.out.println(validRequest);
 			logRequest(params, validRequest);
 			System.out.println("-----------------------------------------");
-		}
-		else {
-			System.out.println("Not POST Request");
 		}
 	 }
 
@@ -176,8 +217,15 @@ public class HTTPServer {
 		
 		try (Connection connection = DriverManager.getConnection("jdbc:postgresql://localhost:5432/postgres", "postgres", "password"))
 		{
+			String reqQuery = "";
 			
-			String reqQuery = "SELECT * FROM " + table + " WHERE " + cond + ";";
+			if(cond == null) {
+				reqQuery = "SELECT * FROM " + table + ";";
+			}
+			else {
+				reqQuery = "SELECT * FROM " + table + " WHERE " + cond + ";";
+			}
+			
 			
 			Statement stmt = connection.createStatement();
 	        ResultSet rs = stmt.executeQuery(reqQuery);
