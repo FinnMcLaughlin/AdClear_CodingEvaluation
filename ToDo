@@ -5,5 +5,5 @@
 - Parse requests x
 - Check validation of requests, reject invalid requests x
 - Count and store statistics per customer per hour x
-- Create an endpoint to get the statistics: for a specific customer + a specific day. 
+- Create an endpoint to get the statistics: for a specific customer + a specific day.x
 	The response must also contain the total number of requests for that day

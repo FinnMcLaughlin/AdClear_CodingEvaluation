@@ -15,6 +15,10 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import com.sun.net.httpserver.HttpContext;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -29,7 +33,13 @@ public class HTTPServer {
 		try {
 			HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 8085), 0);
 			HttpContext context = server.createContext("/");
-		    context.setHandler(HTTPServer::handleRequest);
+		    context.setHandler(arg0 -> {
+				try {
+					handleRequest(arg0);
+				} catch (JSONException e) {
+					//e.printStackTrace();
+				}
+			});
 		    HttpContext testContext = server.createContext("/test");
 		    testContext.setHandler(HTTPServer::endpointHandleRequest);
 		    server.start();
@@ -50,8 +60,9 @@ public class HTTPServer {
 	
 	/* Function to handle the endpoint for customer request statistics based on a specified date */
 	private static void endpointHandleRequest(HttpExchange exchange) throws IOException {
-		Map<String, String> params = new HashMap<String, String>();
 		String parameterString = exchange.getRequestURI().getQuery();
+		
+		Map<String, String> params = new HashMap<String, String>();
 		String usageString = "Usage: localhost:<port>/test?id=<customerID>&date=<yyyy-mm-dd>";
 		String response = usageString;
 		
@@ -91,7 +102,7 @@ public class HTTPServer {
 	}
 		
 	/* Function to handle the requests sent to the server */
-	private static void handleRequest(HttpExchange exchange) throws IOException {		
+	private static void handleRequest(HttpExchange exchange) throws IOException, JSONException {		
 		
 		String method = exchange.getRequestMethod();
 		InputStreamReader inputStream = new InputStreamReader(exchange.getRequestBody(),"utf-8");
@@ -109,7 +120,7 @@ public class HTTPServer {
 			inputStream.close();
 			
 			String requestBodyString = buf.toString();
-			
+
 			exchange.sendResponseHeaders(200, requestBodyString.getBytes().length);
 		    OutputStream os = exchange.getResponseBody();
 		    os.write(requestBodyString.getBytes());
@@ -118,7 +129,10 @@ public class HTTPServer {
 			System.out.println(buf.toString());
 			
 			Map<String, String> params = new HashMap<String, String>();
-			params = formatRequestBody(requestBodyString);
+			params = formatJSON(buf.toString());
+			
+//			Map<String, String> params = new HashMap<String, String>();
+//			params = formatRequestBody(requestBodyString);
 			System.out.println("CustomerID: " + params.get("customerID"));
 			System.out.println("TagID: " + params.get("tagID"));
 			System.out.println("UserID: " + params.get("userID"));
@@ -131,9 +145,36 @@ public class HTTPServer {
 			System.out.println("-----------------------------------------");
 		}
 	 }
-
 	
-	/* Function to format the request body string into a parameter/value Hashmap */
+	/* Function to format the JSON sent via the request body */
+	public static Map<String, String> formatJSON(String inputStream){
+		// Formats the given JSON string, ensures that any missing data is explicitly
+		// stated before being formatted into a JSON object, then extracting
+		// the keys and their values and putting them into a hashmap
+		
+		Map<String, String> info = new HashMap<String, String>();
+		try{
+			inputStream = inputStream.replace(":,", ":null,");
+			inputStream = inputStream.replace(":}", ":null}");
+			
+			JSONObject json = new JSONObject(inputStream);
+			
+			System.out.println(json);
+			
+			JSONArray keys = json.names();
+			
+			for(int keyIndex=0; keyIndex < keys.length(); keyIndex++) {
+				info.put(keys.getString(keyIndex), json.get(keys.getString(keyIndex)).toString());
+			}
+		}
+		catch(JSONException e) {
+			System.out.println(e);
+		}
+		
+		return info;
+	}
+		
+	/* Function to format the parameters sent to deal with the hourly_stats */
 	public static Map<String, String> formatRequestBody(String reqBody){
 		// Formats the given request body string to be further utilised by
 		// getting the parameter count, based on the number of & characters in
