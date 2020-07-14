@@ -8,24 +8,32 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Scanner; 
 
 public class ClientAPI {
 	
-	static String DATE_FORMAT = "yyyy-mm-dd";
+	static String DATE_FORMAT = "yyyy-MM-dd";
 	static String INVALID = "\nINVALID INPUT:  ";
 	
-	public static int getUserInput() {
+	public static String getUserInput() {
 		Scanner inputScanner = new Scanner(System.in);
 		String userInputString = inputScanner.nextLine().replace(" ", "");
 		
 		if(ifValidInput(userInputString)) {
-			return Integer.parseInt(userInputString);
+			return userInputString;
 		}
 		else {
 			System.out.println("\nINVALID INPUT: " + userInputString + "\nMust be integer\n\n");
-			return -1;
+			return "-1";
 		}		 
+	}
+	
+	public static String getUserInput_JSON() {
+		Scanner inputScanner = new Scanner(System.in);
+		String userInputString = inputScanner.nextLine();
+		
+		return userInputString;		 
 	}
 	
 	public static boolean ifValidInput(String userInputString) {
@@ -39,7 +47,7 @@ public class ClientAPI {
 	}
 	
 	public static String getMenuText() {
-		return "-----MAIN-----\n"
+		return "\n-----MAIN-----\n"
 				+ "Send Request to Server (1)\n"
 				+ "Get Hourly Stats from Server (2)\n"
 				+ "Exit Program (3)\n"
@@ -51,7 +59,13 @@ public class ClientAPI {
 				+ "What request would you like to send to the server?\n"
 				+ "Valid Request (1)\n"
 				+ "Invalid Request (2)\n"
+				+ "Custom JSON Request (3)\n"
 				+ "Request Type: ";
+	}
+	
+	public static String getCustomerJSONRequestText() {
+		return "\nEnter custom JSON to send as request\n"
+				+ "JSON: ";
 	}
 	
 	public static String getInvalidRequestOptionsText(){		
@@ -76,9 +90,9 @@ public class ClientAPI {
 	}
 	
 	public static String getDateInput() {
-		int date_day;
-		int date_month;
-		int date_year;
+		String date_day;
+		String date_month;
+		String date_year;
 		String dateString = "";
 		boolean dateFormatValid = false;
 				
@@ -89,19 +103,19 @@ public class ClientAPI {
 				System.out.println("(dd) Day: " );
 				date_day = getUserInput();
 			}
-			while(date_day < 0);
+			while(Integer.parseInt(date_day) < 0);
 			 
 			do {
 				System.out.println("(mm) Month: " );
 				date_month = getUserInput();
 			}
-			while(date_month < 0);
+			while(Integer.parseInt(date_month) < 0);
 			
 			do {
 				System.out.println("(yyyy) Year: " );
 				date_year = getUserInput();
 			}
-			while(date_year < 0);
+			while(Integer.parseInt(date_year) < 0);
 			
 			dateFormatValid = checkDateFormat(dateString = date_year + "-" + date_month + "-" + date_day);
 		}
@@ -113,7 +127,7 @@ public class ClientAPI {
 		DateFormat formatter = new SimpleDateFormat(DATE_FORMAT);
 		formatter.setLenient(false);
 		try {
-		    formatter.parse(dateInput);
+			formatter.parse(dateInput);
 		    return true;
 		} catch (Exception e) {
 			System.out.println(INVALID + "Invalid Date Format.\nUsage: <dd-mm-yyyy>");
@@ -136,8 +150,8 @@ public class ClientAPI {
 	
 	public static String formatResponseMessages(String respMessage, boolean indexMessage) {
 		String formattedMessage = "";
-				
-		if(respMessage.split("&&&").length > 1) {
+						
+		if(respMessage.split("&&&").length > 0) {
 			for(int nameIndex=0; nameIndex < respMessage.split("&&&").length; nameIndex++) {
 				
 				if(indexMessage) {
@@ -148,7 +162,10 @@ public class ClientAPI {
 				}
 				
 			}
-		}		
+		}
+		else {
+			formattedMessage = "\nNO DATA FOUND";
+		}
 					
 		return formattedMessage;
 	}
@@ -162,8 +179,7 @@ public class ClientAPI {
 	}
 	
 	public static String getRequestString(int index) {
-		
-		System.out.println("INDEX --> " + index);
+						
 		switch(index) {
 		/* Valid JSON */
 		case 1:
@@ -171,8 +187,7 @@ public class ClientAPI {
 		
 		/* Malformed JSON */ //----- TODO
 		case 2:
-			//"{\"customerID\":2,\"tagID\":2,\"userID\":\"aaaaaaaa-bbbb-cccc-1111-222222222222\",\"remoteIP\":\"123.234.56.78\",\"timestamp\":1500000000}";
-			return "";
+			return "{\"customerID\":2,\"tagID\"2,\"userID\":\"aaaaaaaa-bbbb-cccc-1111-222222222222\",\"remoteIP\":\"123.234.56.78\",\"timestamp\":1500000000}";
 		
 		/* Null Value JSON */
 		case 3:
@@ -206,6 +221,8 @@ public class ClientAPI {
 		
 		String reqString = getRequestString(requestType);
 		
+		System.out.println("JSON: " + reqString);
+		
 		con.setDoOutput(true);
 		DataOutputStream out = new DataOutputStream(con.getOutputStream());
 		out.writeBytes(reqString);
@@ -217,15 +234,34 @@ public class ClientAPI {
 		disconnectHttpURL(con);
 	}
 	
+	public static void sendRequest_customJSON(String json_String) throws IOException {
+		URL url = new URL("http://localhost:8085/");
+		HttpURLConnection con = (HttpURLConnection) url.openConnection();
+		con.setRequestMethod("POST");
+		con.setRequestProperty("Content-Type", "application/json");
+		
+		System.out.println("JSON: " + json_String);
+				
+		con.setDoOutput(true);
+		DataOutputStream out = new DataOutputStream(con.getOutputStream());
+		out.writeBytes(json_String);
+		out.flush();
+		out.close();
+		
+		System.out.println(readResponse(con));
+		
+		disconnectHttpURL(con);
+	}
+	
 	public static void getHourlyStats(int custId, String date) throws IOException {
 		String params = "id=" + custId + "&date=" + date;
-		
+				
 		URL url = new URL("http://localhost:8085/test?" + params);
 		HttpURLConnection con = (HttpURLConnection) url.openConnection();
 		con.setRequestMethod("GET");
 		con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
 		
-		System.out.println(formatResponseMessages(readResponse(con), false));
+		System.out.println("\n" + formatResponseMessages(readResponse(con), false));
 		
 		disconnectHttpURL(con);
 	}

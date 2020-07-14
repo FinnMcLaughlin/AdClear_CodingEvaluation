@@ -61,14 +61,14 @@ public class HTTPServer {
 	/* Function to handle the endpoint for customer request statistics based on a specified date */
 	private static void endpointHandleRequest(HttpExchange exchange) throws IOException {		
 		String parameterString = exchange.getRequestURI().getQuery();
-		System.out.println("---->" + parameterString);
+		System.out.println("Parametrs: " + parameterString);
 		
 		Map<String, String> params = new HashMap<String, String>();
 		String usageString = "Usage: localhost:<port>/test?id=<customerID>&date=<yyyy-mm-dd>";
 		String response = usageString;
 		
 		if(parameterString != null) {
-			params = ServerAPI.formatRequestBody(exchange.getRequestURI().getQuery());
+			params = ServerAPI.formatRequestBody(parameterString);
 			String param_custID = params.get("id");
 			String param_date = params.get("date");
 			
@@ -95,6 +95,8 @@ public class HTTPServer {
 				response = usageString;
 			}			
 		}
+		
+		System.out.println("Response: " + response);
 		
 		exchange.sendResponseHeaders(200, response.length());
 	    OutputStream os = exchange.getResponseBody();
@@ -136,7 +138,6 @@ public class HTTPServer {
 			System.out.println("Timestamp: " + params.get("timestamp"));
 			
 			boolean validRequest = ServerAPI.validateRequestBody(params);
-			System.out.println(validRequest);
 			
 			exchange.sendResponseHeaders(200, requestBodyString.getBytes().length);
 		    OutputStream os = exchange.getResponseBody();
@@ -148,7 +149,7 @@ public class HTTPServer {
 	
 	
 	private static void hourlyStatsRequestHandle(HttpExchange exchange) throws IOException {		
-		String response = ServerAPI.getQueryResult("customer", null, "name");
+		String response = ServerAPI.getQueryResult("customer", null, "name", true);
 				
 		exchange.sendResponseHeaders(200, response.getBytes().length);
 	    OutputStream os = exchange.getResponseBody();

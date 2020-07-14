@@ -37,7 +37,12 @@ public class ServerAPI {
 			}
 		}
 		catch(JSONException e) {
-			System.out.println(e);
+			System.out.println("MALFORMED JSON");
+			//TO DO-----------------------------------------------------------------------
+			if(inputStream.contains("\"customerID\":")) {
+				System.out.println("CustomerID Exists");
+				System.out.println(inputStream.substring(inputStream.lastIndexOf("\"customerID\":") + 1));
+			}
 		}
 		
 		return info;
@@ -67,7 +72,7 @@ public class ServerAPI {
 			String value = reqBody.split("&")[index].split("=")[1];
 			info.put(key, value);
 			
-//			System.out.println("\nKey: " + key + "  |  Value: " + value);
+			System.out.println("\nKey: " + key + "  |  Value: " + value);
 		}
 		
 		return info;
@@ -93,7 +98,7 @@ public class ServerAPI {
 		
 		//Not in Customer Table || Disabled Customer
 		if(validRequest) {
-			String customerCheck = getQueryResult("Customer", "id=" + params.get("customerID"), "active");
+			String customerCheck = getQueryResult("Customer", "id=" + params.get("customerID"), "active", false);
 			if(customerCheck.compareTo("") == 0 || customerCheck.compareTo("0") == 0) {
 				validRequest = false;
 			}
@@ -101,7 +106,7 @@ public class ServerAPI {
 		
 		//Blacklisted IP
 		if(validRequest) {
-			String ipCheck = getQueryResult("ip_blacklist", "ip=" + params.get("remoteIP").replace(".", ""), "ip");
+			String ipCheck = getQueryResult("ip_blacklist", "ip=" + params.get("remoteIP").replace(".", ""), "ip", false);
 			if(ipCheck.compareTo("") != 0) {
 				validRequest = false;
 			}
@@ -109,7 +114,7 @@ public class ServerAPI {
 		
 		//Blacklist User Agent
 		if(validRequest) {
-			String userAgentCheck = getQueryResult("ua_blacklist", "ua= \'" + params.get("userID") + "\'", "ua");
+			String userAgentCheck = getQueryResult("ua_blacklist", "ua= \'" + params.get("userID") + "\'", "ua", false);
 			if(userAgentCheck.compareTo("") != 0) {
 				validRequest = false;
 			}
@@ -120,7 +125,7 @@ public class ServerAPI {
 	}
 	
 	/* Function to connect to the PSQL database and execute queries */
-	public static String getQueryResult(String table, String cond, String column) {
+	public static String getQueryResult(String table, String cond, String column, boolean hourlyStatRequest) {
 		// Executes a SELECT query to the postgresql database based on the table,
 		// condition(s) passed into the function, and returns the data returned
 		// from the specified column also passed into the function
@@ -140,14 +145,18 @@ public class ServerAPI {
 			Statement stmt = connection.createStatement();
 	        ResultSet rs = stmt.executeQuery(reqQuery);
 	        String response = "";
-	
+	        String result_split = "";
+	        
+	        if(hourlyStatRequest) {
+	        	result_split = "&&&";
+	        }
+	        
 	        while ( rs.next() )
 	        {
-	        	response = response + rs.getString(column) + "&&&";
+	        	response = response + rs.getString(column) + result_split;
+	        	//System.out.println("Result: " + rs.getString(column));
 	        }	
-	        
-	        System.out.println(table + " " + cond + " " + column + " " + "->" + response);
-	        
+	        	        
 	        return response;
 	
 		}
@@ -172,8 +181,7 @@ public class ServerAPI {
 		{
 			
 			String logQuery = "";
-			String customerExists_requestLogTable = getQueryResult("requestLog", "customerId=" + params.get("customerID"), "customerId");	
-			String resultMessage = "";
+			String customerExists_requestLogTable = getQueryResult("requestLog", "customerId=" + params.get("customerID"), "customerId", false);	
 			boolean customerExists_customerTable = true;
 			
 			if(customerExists_requestLogTable.compareTo("") == 0) {				
@@ -190,7 +198,7 @@ public class ServerAPI {
 				}
 										
 				
-				if(getQueryResult("customer", "id=" + params.get("customerID"), "name").length() > 0) {
+				if(getQueryResult("customer", "id=" + params.get("customerID"), "name", false).length() > 0) {
 					logQuery = "INSERT INTO requestLog VALUES (" + custID + "," + valid_request + "," + invalid_request + ");";
 				}
 				else {
@@ -204,13 +212,11 @@ public class ServerAPI {
 				
 				if(validRequest) {
 					update_column = "request_count";
-					update_count = Integer.parseInt(getQueryResult("requestLog", "customerId=" + params.get("customerID"), "request_count"));
-					System.out.println(update_count);
+					update_count = Integer.parseInt(getQueryResult("requestLog", "customerId=" + params.get("customerID"), "request_count", false));
 				}
 				else {
 					update_column = "invalid_count";
-					update_count = Integer.parseInt(getQueryResult("requestLog", "customerId=" + params.get("customerID"), "invalid_count"));
-					System.out.println(update_count);
+					update_count = Integer.parseInt(getQueryResult("requestLog", "customerId=" + params.get("customerID"), "invalid_count", false));
 				}
 				
 				if(update_column.compareTo("") != 0 && update_count >= 0) {
