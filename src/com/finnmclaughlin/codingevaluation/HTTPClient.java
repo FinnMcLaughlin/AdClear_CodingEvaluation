@@ -48,17 +48,17 @@ public class HTTPClient {
 				
 					
 					
+					
+					
 				case 2:
 					System.out.println(ClientAPI.getHourlyStatsMenuText());
 					userInput = ClientAPI.getUserInput();
 					
 					if(userInput > 0 && userInput < ClientAPI.getCustomerNamesCount()+1) {
 						int customerID = userInput;
-						
-						System.out.println(ClientAPI.getDateText());
-						userInput = ClientAPI.getUserInput();
-						
-						ClientAPI.getHourlyStats(customerID, "2020-07-12");
+						String date = ClientAPI.getDateInput();
+					
+						ClientAPI.getHourlyStats(customerID, date);
 					}
 					else {
 						System.out.println("\nINVALID INPUT: " + userInput + "\nOut of bounds input\n");

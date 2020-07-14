@@ -6,9 +6,14 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.Scanner;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Scanner; 
 
 public class ClientAPI {
+	
+	static String DATE_FORMAT = "yyyy-mm-dd";
+	static String INVALID = "\nINVALID INPUT:  ";
 	
 	public static int getUserInput() {
 		Scanner inputScanner = new Scanner(System.in);
@@ -65,15 +70,55 @@ public class ClientAPI {
 				+ getCustomerNamesStringFormatted()
 				+ "Customer ID: ";
 	}
-	
-	public static boolean checkDateFormat(String date) {
 		
-		return true;
+	public static String getDateMenuText() {	
+		return "What date would you like to inquire about?\n";
 	}
 	
-	public static String getDateText() {	
-		return "What date would you like to inquire about?\n"
-				+ "(YYYY-MM-DD) Date: ";
+	public static String getDateInput() {
+		int date_day;
+		int date_month;
+		int date_year;
+		String dateString = "";
+		boolean dateFormatValid = false;
+				
+		while(!dateFormatValid) {
+			System.out.println(getDateMenuText());
+			
+			do {
+				System.out.println("(dd) Day: " );
+				date_day = getUserInput();
+			}
+			while(date_day < 0);
+			 
+			do {
+				System.out.println("(mm) Month: " );
+				date_month = getUserInput();
+			}
+			while(date_month < 0);
+			
+			do {
+				System.out.println("(yyyy) Year: " );
+				date_year = getUserInput();
+			}
+			while(date_year < 0);
+			
+			dateFormatValid = checkDateFormat(dateString = date_year + "-" + date_month + "-" + date_day);
+		}
+			
+		return dateString;
+	}
+
+	public static boolean checkDateFormat(String dateInput) {
+		DateFormat formatter = new SimpleDateFormat(DATE_FORMAT);
+		formatter.setLenient(false);
+		try {
+		    formatter.parse(dateInput);
+		    return true;
+		} catch (Exception e) {
+			System.out.println(INVALID + "Invalid Date Format.\nUsage: <dd-mm-yyyy>");
+			return false;
+		}
 	}
 	
 	public static String getCustomerNames() throws IOException {		
@@ -89,20 +134,27 @@ public class ClientAPI {
 		return names;
 	}
 	
-	public static String formatResponseMessages(String respMessage) {
-		String customerNamesString = "";
-		
-		if(respMessage.split("&&&").length > 0) {
+	public static String formatResponseMessages(String respMessage, boolean indexMessage) {
+		String formattedMessage = "";
+				
+		if(respMessage.split("&&&").length > 1) {
 			for(int nameIndex=0; nameIndex < respMessage.split("&&&").length; nameIndex++) {
-				customerNamesString = customerNamesString + respMessage.split("&&&")[nameIndex] + " (" + (nameIndex+1) + ")\n";
+				
+				if(indexMessage) {
+					formattedMessage = formattedMessage + respMessage.split("&&&")[nameIndex] + " (" + (nameIndex+1) + ")\n";
+				}
+				else {
+					formattedMessage = formattedMessage + respMessage.split("&&&")[nameIndex] + "\n";
+				}
+				
 			}
-		}
+		}		
 					
-		return customerNamesString;
+		return formattedMessage;
 	}
 	
 	public static String getCustomerNamesStringFormatted() throws IOException {					
-		return formatResponseMessages(getCustomerNames());
+		return formatResponseMessages(getCustomerNames(), true);
 	}
 	
 	public static int getCustomerNamesCount() throws IOException{
@@ -173,7 +225,7 @@ public class ClientAPI {
 		con.setRequestMethod("GET");
 		con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
 		
-		System.out.println(formatResponseMessages(readResponse(con)));
+		System.out.println(formatResponseMessages(readResponse(con), false));
 		
 		disconnectHttpURL(con);
 	}
