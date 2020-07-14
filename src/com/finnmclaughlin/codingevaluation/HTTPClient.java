@@ -1,86 +1,91 @@
 package com.finnmclaughlin.codingevaluation;
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.util.HashMap;
-import java.util.Map;
 
+import java.io.IOException;
+import com.finnmclaughlin.codingevaluation.ClientAPI;
 
 public class HTTPClient {
 	public static void main(String[] args) throws IOException {
 		// TODO Auto-generated method stub	
-		
-//		URL url = new URL("http://localhost:8085/test?id=2&date=2020-07-12");
-//		HttpURLConnection con = (HttpURLConnection) url.openConnection();
-//		con.setRequestMethod("GET");
-//		con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-		
-		URL url = new URL("http://localhost:8085/");
-		HttpURLConnection con = (HttpURLConnection) url.openConnection();
-		con.setRequestMethod("POST");
-		con.setRequestProperty("Content-Type", "application/json");
-		
-		String reqString = "";
-		/* Valid JSON */
-		reqString = "{\"customerID\":2,\"tagID\":2,\"userID\":\"aaaaaaaa-bbbb-cccc-1111-222222222222\",\"remoteIP\":\"123.234.56.78\",\"timestamp\":1500000000}";
-		/* Malformed JSON */ //----- TODO
-		//reqString = "{\"customerID\":2,\"tagID\":2,\"userID\":\"aaaaaaaa-bbbb-cccc-1111-222222222222\",\"remoteIP\":\"123.234.56.78\",\"timestamp\":1500000000}";
-		/* Null Value JSON */
-		//reqString = "{\"customerID\":2,\"tagID\": ,\"userID\":\"aaaaaaaa-bbbb-cccc-1111-222222222222\",\"remoteIP\":\"123.234.56.78\",\"timestamp\":1500000000}";
-		/* Customer Does not exist */
-		//reqString = "{\"customerID\":15,\"tagID\":2,\"userID\":\"aaaaaaaa-bbbb-cccc-1111-222222222222\",\"remoteIP\":\"123.234.56.78\",\"timestamp\":1500000000}";
-		/* Inactive Customer */
-		//reqString = "{\"customerID\":3,\"tagID\":2,\"userID\":\"aaaaaaaa-bbbb-cccc-1111-222222222222\",\"remoteIP\":\"123.234.56.78\",\"timestamp\":1500000000}";
-		/* Blacklisted UserAgent */
-		//reqString = "{\"customerID\":2,\"tagID\":2,\"userID\":\"Googlebot\",\"remoteIP\":\"123.234.56.78\",\"timestamp\":1500000000}";
-		/* Blacklist IP Address */
-		//reqString = "{\"customerID\":2,\"tagID\":2,\"userID\":\"aaaaaaaa-bbbb-cccc-1111-222222222222\",\"remoteIP\":\"213.070.64.33\",\"timestamp\":1500000000}";
-		
-		con.setDoOutput(true);
-		DataOutputStream out = new DataOutputStream(con.getOutputStream());
-		out.writeBytes(reqString);
-		out.flush();
-		out.close();
-		
-		BufferedReader in = new BufferedReader(
-				  new InputStreamReader(con.getInputStream()));
-				String inputLine;
-				StringBuffer content = new StringBuffer();
-				while ((inputLine = in.readLine()) != null) {
-				    content.append(inputLine);
-				}
-				in.close();
 				
-		System.out.println(content.toString());
+		boolean exitProgram = false;
 		
-		con.disconnect();
-	}
-	
-	public static String ParameterStringBuilder(Map<String, String> params) throws UnsupportedEncodingException {
-        StringBuilder result = new StringBuilder();
- 
-        for (Map.Entry<String, String> entry : params.entrySet()) {
-          result.append(URLEncoder.encode(entry.getKey(), "UTF-8"));
-          result.append("=");
-          result.append(URLEncoder.encode(entry.getValue(), "UTF-8"));
-          result.append("&");
-        }
- 
-        String resultString = result.toString();
-        
-        System.out.println(resultString);
-        
-        if(resultString.length() > 0) {
-        	return resultString.substring(0, resultString.length() - 1);
-        }
-        else {
-        	return resultString;
-        }        
+		while(!exitProgram) {
+			System.out.println(ClientAPI.getMenuText());
+			int userInput = ClientAPI.getUserInput();			
+				
+			if(userInput > 0) {
+				boolean backToMain = false;
+				
+				switch(userInput) {			
+				case 1:
+					System.out.println("Case 1\n");
+					while(!backToMain) {
+						System.out.println(ClientAPI.getRequestOptionsText());
+						userInput = ClientAPI.getUserInput();
+						
+						switch(userInput) {
+						case 1:
+							ClientAPI.sendRequest(1);
+							backToMain = true;
+							break;
+						
+						case 2:
+							System.out.println(ClientAPI.getInvalidRequestOptionsText());
+							userInput = ClientAPI.getUserInput();
+							if (userInput > 0 && userInput < 7) {
+								ClientAPI.sendRequest(userInput + 1);
+							}
+							backToMain = true;
+							break;
+						
+						default:
+							backToMain = true;
+							exitProgram = true;
+						}	
+					}			
+					break;
+				
+				
+					
+					
+				case 2:
+					System.out.println(ClientAPI.getHourlyStatsMenuText());
+					userInput = ClientAPI.getUserInput();
+					
+					if(userInput > 0 && userInput < ClientAPI.getCustomerNamesCount()+1) {
+						int customerID = userInput;
+						
+						System.out.println(ClientAPI.getDateText());
+						userInput = ClientAPI.getUserInput();
+						
+						ClientAPI.getHourlyStats(customerID, "2020-07-12");
+					}
+					else {
+						System.out.println("\nINVALID INPUT: " + userInput + "\nOut of bounds input\n");
+					}
+					
+					break;
+				
+				
+					
+					
+					
+					
+					
+					
+					
+				case 3:
+					System.out.println("Case 3\n");
+					System.out.println("Exiting Program...\n");
+					exitProgram = true;
+					break;
+					
+				default:
+					System.out.println("Invalid");
+				}
+			}		
+		}
+		
 	}
 }
 

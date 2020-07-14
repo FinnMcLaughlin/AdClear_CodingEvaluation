@@ -40,6 +40,8 @@ public class HTTPServer {
 			});
 		    HttpContext testContext = server.createContext("/test");
 		    testContext.setHandler(HTTPServer::endpointHandleRequest);
+		    HttpContext hourlyStats_getNameContext = server.createContext("/test/names");
+		    hourlyStats_getNameContext.setHandler(HTTPServer::hourlyStatsRequestHandle);;
 		    server.start();
 		    
 		    Timer timer = new Timer();
@@ -82,7 +84,7 @@ public class HTTPServer {
 			        
 			        response = "";
 			        while(selectResult.next()) {
-			        	response = response + "(" + selectResult.getString("time") + ") " + selectResult.getString("name") + " -> Valid Requests: " + selectResult.getString("request_count") + " | Invalid Requests: " + selectResult.getString("invalid_count") + "\n";
+			        	response = response + "(" + selectResult.getString("time") + ") " + selectResult.getString("name") + " -> Valid Requests: " + selectResult.getString("request_count") + " | Invalid Requests: " + selectResult.getString("invalid_count") + "&&&";
 			        }
 				}
 				catch(Exception e) {
@@ -144,4 +146,13 @@ public class HTTPServer {
 		}
 	 }
 	
+	
+	private static void hourlyStatsRequestHandle(HttpExchange exchange) throws IOException {		
+		String response = ServerAPI.getQueryResult("customer", null, "name");
+				
+		exchange.sendResponseHeaders(200, response.getBytes().length);
+	    OutputStream os = exchange.getResponseBody();
+	    os.write(response.getBytes());
+	    os.close();
+	}
 }

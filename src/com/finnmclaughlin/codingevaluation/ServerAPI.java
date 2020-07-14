@@ -22,6 +22,7 @@ public class ServerAPI {
 		
 		Map<String, String> info = new HashMap<String, String>();
 		try{
+			inputStream = inputStream.replace(" ", "");
 			inputStream = inputStream.replace(":,", ":null,");
 			inputStream = inputStream.replace(":}", ":null}");
 			
@@ -142,10 +143,10 @@ public class ServerAPI {
 	
 	        while ( rs.next() )
 	        {
-	        	response = response + rs.getString(column);
+	        	response = response + rs.getString(column) + "&&&";
 	        }	
 	        
-	        //System.out.println("->" + response);
+	        System.out.println(table + " " + cond + " " + column + " " + "->" + response);
 	        
 	        return response;
 	
@@ -187,6 +188,7 @@ public class ServerAPI {
 				else {
 					invalid_request = invalid_request + 1;
 				}
+										
 				
 				if(getQueryResult("customer", "id=" + params.get("customerID"), "name").length() > 0) {
 					logQuery = "INSERT INTO requestLog VALUES (" + custID + "," + valid_request + "," + invalid_request + ");";
