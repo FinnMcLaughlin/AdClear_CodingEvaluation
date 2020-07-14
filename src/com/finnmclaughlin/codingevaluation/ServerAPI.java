@@ -1,8 +1,4 @@
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.InetSocketAddress;
+package com.finnmclaughlin.codingevaluation;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -12,140 +8,12 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.sun.net.httpserver.HttpContext;
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpServer;
-		
-public class HTTPServer {
-
-	/* Main that creates localhost HttpServer using port 8085,
-	 sets the handler function to handle requests sent to the server,
-	 and starts server */
-	public static void main(String[] args) throws IOException {
-		
-		try {
-			HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 8085), 0);
-			HttpContext context = server.createContext("/");
-		    context.setHandler(arg0 -> {
-				try {
-					handleRequest(arg0);
-				} catch (JSONException e) {
-					//e.printStackTrace();
-				}
-			});
-		    HttpContext testContext = server.createContext("/test");
-		    testContext.setHandler(HTTPServer::endpointHandleRequest);
-		    server.start();
-		    
-		    Timer timer = new Timer();
-		    TimerTask updateHourlyStats = new TimerTask() {
-		    	public void run() {
-		    		updateHourlyStatsTable();
-		    	}
-		    };
-		    
-		    timer.schedule (updateHourlyStats, 1000*60*60l, 1000*60*60);
-		}
-		catch(Exception e){
-			System.out.println(e);
-		}
-	}
-	
-	/* Function to handle the endpoint for customer request statistics based on a specified date */
-	private static void endpointHandleRequest(HttpExchange exchange) throws IOException {
-		String parameterString = exchange.getRequestURI().getQuery();
-		
-		Map<String, String> params = new HashMap<String, String>();
-		String usageString = "Usage: localhost:<port>/test?id=<customerID>&date=<yyyy-mm-dd>";
-		String response = usageString;
-		
-		if(parameterString != null) {
-			params = formatRequestBody(exchange.getRequestURI().getQuery());
-			String param_custID = params.get("id");
-			String param_date = params.get("date");
-			
-			if(param_custID != null && param_date != null) {				
-				try (Connection connection = DriverManager.getConnection("jdbc:postgresql://localhost:5432/postgres", "postgres", "password"))
-				{
-					String reqQuery = "SELECT * FROM hourly_stats INNER JOIN customer on (hourly_stats.customer_id = customer.id)"
-							+ " WHERE hourly_stats.customer_id=" + param_custID
-							+ " AND time::date = \'" + param_date + "\';";
-					
-					Statement selectStmt = connection.createStatement();
-			        ResultSet selectResult = selectStmt.executeQuery(reqQuery);
-			        
-			        response = "";
-			        while(selectResult.next()) {
-			        	response = response + "(" + selectResult.getString("time") + ") " + selectResult.getString("name") + " -> Valid Requests: " + selectResult.getString("request_count") + " | Invalid Requests: " + selectResult.getString("invalid_count") + "\n";
-			        }
-				}
-				catch(Exception e) {
-					System.out.println(e);
-				}
-			}
-			else {
-				response = usageString;
-			}			
-		}
-		
-		exchange.sendResponseHeaders(200, response.length());
-	    OutputStream os = exchange.getResponseBody();
-	    os.write(response.getBytes());
-	    os.close();
-	}
-		
-	/* Function to handle the requests sent to the server */
-	private static void handleRequest(HttpExchange exchange) throws IOException, JSONException {		
-		
-		String method = exchange.getRequestMethod();
-		InputStreamReader inputStream = new InputStreamReader(exchange.getRequestBody(),"utf-8");
-				
-		if (method.equalsIgnoreCase("POST")) {
-			BufferedReader bReader = new BufferedReader(inputStream);
-			int b;
-			StringBuilder buf = new StringBuilder(512);
-			
-			while ((b = bReader.read()) != -1) {
-			    buf.append((char) b);
-			}
-
-			bReader.close();
-			inputStream.close();
-			
-			String requestBodyString = buf.toString();
-
-			exchange.sendResponseHeaders(200, requestBodyString.getBytes().length);
-		    OutputStream os = exchange.getResponseBody();
-		    os.write(requestBodyString.getBytes());
-		    os.close();
-			
-			System.out.println(buf.toString());
-			
-			Map<String, String> params = new HashMap<String, String>();
-			params = formatJSON(buf.toString());
-			
-//			Map<String, String> params = new HashMap<String, String>();
-//			params = formatRequestBody(requestBodyString);
-			System.out.println("CustomerID: " + params.get("customerID"));
-			System.out.println("TagID: " + params.get("tagID"));
-			System.out.println("UserID: " + params.get("userID"));
-			System.out.println("RemoteIP: " + params.get("remoteIP"));
-			System.out.println("Timestamp: " + params.get("timestamp"));
-			
-			boolean validRequest = validateRequestBody(params);
-			System.out.println(validRequest);
-			logRequest(params, validRequest);
-			System.out.println("-----------------------------------------");
-		}
-	 }
-	
+public class ServerAPI {
 	/* Function to format the JSON sent via the request body */
 	public static Map<String, String> formatJSON(String inputStream){
 		// Formats the given JSON string, ensures that any missing data is explicitly
@@ -292,7 +160,7 @@ public class HTTPServer {
 
 	/* Function log each request made to the server, based on the customerID and whether the
 	   request made was a valid request or not */
-	public static void logRequest(Map<String, String> params, boolean validRequest) {
+	public static String logRequest(Map<String, String> params, boolean validRequest) {
 		// Check to see if the customerID exists in the requestLog table
 		// If customerID does not exist in the table, then the logQuery is written as an INSERT, and the data is initialised
 		// If customerID does exist in the table, then the logQuery is written as an UPDATE, incrementing the specified column data
@@ -303,9 +171,11 @@ public class HTTPServer {
 		{
 			
 			String logQuery = "";
-			String customerCheck = getQueryResult("requestLog", "customerId=" + params.get("customerID"), "customerId");			
+			String customerExists_requestLogTable = getQueryResult("requestLog", "customerId=" + params.get("customerID"), "customerId");	
+			String resultMessage = "";
+			boolean customerExists_customerTable = true;
 			
-			if(customerCheck.compareTo("") == 0) {				
+			if(customerExists_requestLogTable.compareTo("") == 0) {				
 				String custID = params.get("customerID");
 								
 				int valid_request = 0;
@@ -318,8 +188,12 @@ public class HTTPServer {
 					invalid_request = invalid_request + 1;
 				}
 				
-				logQuery = "INSERT INTO requestLog VALUES (" + custID + "," + valid_request + "," + invalid_request + ");";
-			
+				if(getQueryResult("customer", "id=" + params.get("customerID"), "name").length() > 0) {
+					logQuery = "INSERT INTO requestLog VALUES (" + custID + "," + valid_request + "," + invalid_request + ");";
+				}
+				else {
+					customerExists_customerTable = false;
+				}
 			}
 			else {				
 				String custID = params.get("customerID");
@@ -353,12 +227,36 @@ public class HTTPServer {
 		        	System.out.println("Request Log UnSuccessful");
 		        }
 			}
+			
+			return createResponseMessage(customerExists_customerTable, validRequest);
 		}
 		catch (Exception e) 
 		{
 	        System.out.println(e);
 	        e.printStackTrace();
+	        
+	        return "Database Error. Request Was Unsuccessful";
 	    }
+	}
+
+	/* Function to create message response to send to client with regards to the successfulness of the request */
+	public static String createResponseMessage(boolean customerExists, boolean validRequest) {
+		String responseMessage = "";
+		
+		if(customerExists) {
+			if(validRequest) {
+				responseMessage = "Request Made Successfully";
+			}
+			else {
+				responseMessage = "Invalid Request. Request Was Unsuccessful";
+			}
+		}
+		else {
+			responseMessage = "CustomerID does not exist. Request Was Unsuccessful";
+		}
+		
+		return responseMessage;
+		
 	}
 	
 	/* Function to update hourly_stats table every hour */
@@ -400,4 +298,5 @@ public class HTTPServer {
 			System.out.println(e);
 		}
 	}
+
 }
