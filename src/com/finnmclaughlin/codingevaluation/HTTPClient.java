@@ -54,7 +54,6 @@ public class HTTPClient {
 					}			
 					break;			
 					
-					
 				case 2:
 					while(!backToMain) {
 						System.out.println(ClientAPI.getHourlyStatsMenuText());
@@ -75,7 +74,6 @@ public class HTTPClient {
 					
 					break;
 
-					
 				case 3:
 					System.out.println("Exiting Program...\n");
 					exitProgram = true;

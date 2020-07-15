@@ -42,7 +42,7 @@ public class HTTPServer {
 				}
 			});
 		    
-		    HttpContext statsContext = server.createContext("/stats");
+			HttpContext statsContext = server.createContext("/stats");
 		    statsContext.setHandler(HTTPServer::hourlyStatsRequestHandler);
 		    HttpContext stats_getNames = server.createContext("/stats/names");
 		    stats_getNames.setHandler(HTTPServer::hourlyStatsNamesRequestHandler);
@@ -83,7 +83,7 @@ public class HTTPServer {
 			
 			String requestBodyString = buf.toString();
 			
-			System.out.println(buf.toString());
+			System.out.println(requestBodyString);
 			
 			Map<String, String> params = new HashMap<String, String>();
 			params = ServerAPI.formatJSON(requestBodyString);
@@ -94,7 +94,7 @@ public class HTTPServer {
 			System.out.println("RemoteIP: " + params.get("remoteIP"));
 			System.out.println("Timestamp: " + params.get("timestamp"));
 			
-			boolean validRequest = ServerAPI.validateRequestBody(params);
+			boolean validRequest = ServerAPI.validateJSONRequest(params);
 			
 			exchange.sendResponseHeaders(200, requestBodyString.getBytes().length);
 		    OutputStream os = exchange.getResponseBody();
@@ -107,19 +107,25 @@ public class HTTPServer {
 	
 	
 	/*-
-	 * Request Handler to return a count of valid and invalid requests made by a specified
+	 * Request Handler to return a list of data found in the hourly_stats table, which includes 
+	 * a count of valid and invalid requests made within per hour by a specified
 	 * customer on a specified date
 	 */
 	private static void hourlyStatsRequestHandler(HttpExchange exchange) throws IOException {		
 		String parameterString = exchange.getRequestURI().getQuery();
 		System.out.println("Parametrs: " + parameterString);
 		
-		String response = "";
+		/*-
+		 * Although error checking is being used to validate input on the client class before being sent,
+		 * the usage string is necessary if the hourly_stats data is being attempted to be retrieved from
+		 * the browser
+		 */	
+		String response = "Usage: localhost:<port>/test?id=<customerID>&date=<yyyy-mm-dd>";
 		
 		if(parameterString != null) {
 			Map<String, String> params = new HashMap<String, String>();
 			
-			params = ServerAPI.formatRequestBody(parameterString);
+			params = ServerAPI.formatHourlyStatsParams(parameterString);
 			String param_custID = params.get("id");
 			String param_date = params.get("date");
 			
@@ -127,10 +133,11 @@ public class HTTPServer {
 				/*-
 				 * If the parameters ID and Date are present as part of the request parameters, a connection is made
 				 * to the database, and the request Query is executed, retrieving all instances of the specified customer 
-				 * id on the specified date found within the hourly_stats table. A string is created using this retrieved
+				 * id on the specified date found within the hourly_stats table, as well as the customers name, which is
+				 * obtained from the customer table using the specified customer id. A string is created using this retrieved
 				 * data and is sent as a response to the client.
 				 */
-				try (Connection connection = DriverManager.getConnection("jdbc:postgresql://localhost:5432/postgres", "postgres", "password"))
+				try (Connection connection = ServerAPI.connectToDB())
 				{
 					String reqQuery = "SELECT * FROM hourly_stats INNER JOIN customer on (hourly_stats.customer_id = customer.id)"
 							+ " WHERE hourly_stats.customer_id=" + param_custID
@@ -154,14 +161,11 @@ public class HTTPServer {
 					System.out.println(e);
 				}
 			}
-			/*-
-			 * Although error checking is being used to validate input on the client class before being sent,
-			 * the usage string is necessary if the hourly_stats data is being attempted to be retrieved from
-			 * the browser
-			 */
-			else {
-				response = "Usage: localhost:<port>/test?id=<customerID>&date=<yyyy-mm-dd>";
-			}			
+					
+		}
+		
+		if(response.equalsIgnoreCase("")) {
+			response = "No Data Found";
 		}
 		
 		System.out.println("Response: " + response);

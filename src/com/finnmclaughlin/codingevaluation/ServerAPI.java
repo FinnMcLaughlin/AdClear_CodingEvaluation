@@ -3,6 +3,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -14,13 +15,31 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 public class ServerAPI {
-	/* Function to format the JSON sent via the request body */
-	public static Map<String, String> formatJSON(String inputStream){
-		// Formats the given JSON string, ensures that any missing data is explicitly
-		// stated before being formatted into a JSON object, then extracting
-		// the keys and their values and putting them into a hashmap
+	
+	static String DB_URL = "jdbc:postgresql://localhost:5432/postgres";
+	static String DB_USER = "postgres";
+	static String DB_PWD = "password";
+	
+	/*-
+	 * Function to connect to Database using the static variables
+	 * declared at the top of the ServerAPI class
+	 */
+	public static Connection connectToDB() throws SQLException {
+		return DriverManager.getConnection(DB_URL, DB_USER, DB_PWD);
+	}
+	
+	
+	/*-
+	 * Function to format the JSON String sent as a request to the server
+	 * by looking for missing parameter values and explicitly stating "null"
+	 * for future validation, before placing the values within a Hashmap and
+	 * returning it. Most of the functionality of the function is surrounded
+	 * within a try/catch, where if unsuccessful indicates whether the the 
+	 * JSON is malformed
+	 */
+	public static Map<String, String> formatJSON(String inputStream){		
+		Map<String, String> key_values = new HashMap<String, String>();
 		
-		Map<String, String> info = new HashMap<String, String>();
 		try{
 			inputStream = inputStream.replace(" ", "");
 			inputStream = inputStream.replace(":,", ":null,");
@@ -33,7 +52,7 @@ public class ServerAPI {
 			JSONArray keys = json.names();
 			
 			for(int keyIndex=0; keyIndex < keys.length(); keyIndex++) {
-				info.put(keys.getString(keyIndex), json.get(keys.getString(keyIndex)).toString());
+				key_values.put(keys.getString(keyIndex), json.get(keys.getString(keyIndex)).toString());
 			}
 		}
 		catch(JSONException e) {
@@ -45,50 +64,21 @@ public class ServerAPI {
 			}
 		}
 		
-		return info;
+		return key_values;
 	}
 	
-	/* Function to format the parameters sent to deal with the hourly_stats */
-	public static Map<String, String> formatRequestBody(String reqBody){
-		// Formats the given request body string to be further utilised by
-		// getting the parameter count, based on the number of & characters in
-		// the request body string, ensures that any missing data is explicitly
-		// stated, and then extracts the parameters and their values and puts them
-		// into a hashmap		
-		
-		Map<String, String> info = new HashMap<String, String>();
-		
-		int paramCount = reqBody.length() - reqBody.replace("&", "").length() + 1;
-//		System.out.println("Paramter Count: " + paramCount);
-		
-		reqBody = reqBody.replace("=&", "=null&");
-		
-		if(reqBody.charAt(reqBody.length()-1) == '=') {
-			reqBody = reqBody.concat("null");
-		}
-		
-		for(int index=0; index < paramCount; index++) {					
-			String key = reqBody.split("&")[index].split("=")[0];
-			String value = reqBody.split("&")[index].split("=")[1];
-			info.put(key, value);
-			
-			System.out.println("\nKey: " + key + "  |  Value: " + value);
-		}
-		
-		return info;
-	}
 	
-	/* Function to validate the request body data */
-	public static boolean validateRequestBody(Map<String, String> params) {
-		// Checks whether the data passed through the request body is valid,
-		// based on whether it is or isn't malformed, whether the customer 
-		// exists in the database, whether the customer holds an active
-		// account, and whether or not the IP address and the User Agent
-		// is blacklisted		
-		
+	/*-
+	 * Function to validate the values sent via the JSON request, returning a
+	 * boolean value upon completion. Validation includes making sure there are 
+	 * no missing values, that the customer exists in the customer table, that
+	 * the customer is an active customer, that the IP Address and User Agents
+	 * used are not blacklisted.
+	 */
+	public static boolean validateJSONRequest(Map<String, String> params) {		
 		boolean validRequest = true;
 				
-		//Malformed JSON
+		//Missing Value
 		for(Map.Entry<String, String> parameter : params.entrySet()) {			
 			if(parameter.getValue().compareTo("null") == 0) {
 				validRequest = false;
@@ -120,17 +110,54 @@ public class ServerAPI {
 			}
 		}
 		
-		
 		return validRequest;
-	}
+	}	
 	
-	/* Function to connect to the PSQL database and execute queries */
-	public static String getQueryResult(String table, String cond, String column, boolean hourlyStatRequest) {
-		// Executes a SELECT query to the postgresql database based on the table,
-		// condition(s) passed into the function, and returns the data returned
-		// from the specified column also passed into the function
+	
+	/*-
+	 *  Function to format the parameters sent when retrieving data from the 
+	 *  hourly_stats table, by looking for missing parameter values and explicitly
+	 *  stating "null" for future validation, before placing the values within a
+	 *  Hashmap and returning it
+	 */
+	public static Map<String, String> formatHourlyStatsParams(String parameterString){
+		Map<String, String> info = new HashMap<String, String>();
 		
-		try (Connection connection = DriverManager.getConnection("jdbc:postgresql://localhost:5432/postgres", "postgres", "password"))
+		/* Gets the number of & in the string, which separates 2 parameters*/
+		int paramCount = parameterString.length() - parameterString.replace("&", "").length() + 1;
+		
+		
+		parameterString = parameterString.replace("=&", "=null&");
+		
+		if(parameterString.charAt(parameterString.length()-1) == '=') {
+			parameterString = parameterString.concat("null");
+		}
+		
+		for(int index=0; index < paramCount; index++) {
+			String key = parameterString.split("&")[index].split("=")[0];
+			String value = parameterString.split("&")[index].split("=")[1];
+			info.put(key, value);
+		}
+		
+		return info;
+	}
+
+	
+	/*-
+	 * Function that executes a SELECT statement from a specified table and returns data
+	 * from a specified column within the table. If a condition is passed to the function,
+	 * then that condition is executed in the statement, otherwise all instances from the
+	 * specified table are returned.
+	 * 
+	 * A boolean value is also passed to the function to 
+	 * determine whether the SELECT statement is being used to execute an hourly_stats
+	 * request, if this is the case then "&&&" is added to the end of each iteration to distinguish
+	 * between each data entry returned from the table, as '\n' was not being registered when sent
+	 * as part of the response string 
+	 */
+	public static String getQueryResult(String table, String cond, String column, boolean hourlyStatsRequest) {
+		
+		try (Connection connection = connectToDB())
 		{
 			String reqQuery = "";
 			
@@ -147,7 +174,7 @@ public class ServerAPI {
 	        String response = "";
 	        String result_split = "";
 	        
-	        if(hourlyStatRequest) {
+	        if(hourlyStatsRequest) {
 	        	result_split = "&&&";
 	        }
 	        
@@ -167,19 +194,44 @@ public class ServerAPI {
 	        return "Connection Failure";
 	    }
 	}
+
 	
-	/* Function log each request made to the server, based on the customerID and whether the
-	   request made was a valid request or not */
-	public static String logRequest(Map<String, String> params, boolean validRequest) {
-		// Check to see if the customerID exists in the requestLog table
-		// If customerID does not exist in the table, then the logQuery is written as an INSERT, and the data is initialised
-		// If customerID does exist in the table, then the logQuery is written as an UPDATE, incrementing the specified column data
-		// The validRequest boolean which is passed to the function is used to know which column's data is to be incremented when 
-		// logging the request
+	/*-
+	 * Function to create a response message following a JSON request. The response message
+	 * is determined by whether the customer ID exists in the customer table, if not it cannot
+	 * be logged in the requestLog table, and if the JSON request is in itself a valid request
+	 */
+	public static String createResponseMessage(boolean customerExists, boolean validRequest) {
+		String responseMessage = "";
 		
-		try (Connection connection = DriverManager.getConnection("jdbc:postgresql://localhost:5432/postgres", "postgres", "password"))
+		if(customerExists) {
+			if(validRequest) {
+				responseMessage = "Request Made Successfully";
+			}
+			else {
+				responseMessage = "Invalid Request. Request Was Unsuccessful";
+			}
+		}
+		else {
+			responseMessage = "CustomerID does not exist. Request Was Unsuccessful";
+		}
+		
+		return responseMessage;	
+	}
+
+	
+	/*-
+	 * Function to log a request into the logRequest table, which includes the customers ID and whether
+	 * or not the request made was valid. The function first checks if the customer has already made a 
+	 * request within the hour, and if so is present within the logRequest table. If they are not present,
+	 * the valid and invalid request counts are initialised, the relevant count is incremented and they are
+	 * both added to the logRequest table, along with the customerID. If they are present, the relevant
+	 * request count of the specified customer ID is incremented within the table. A response message is
+	 * returned, which is created by calling the responseMessage() function
+	 */
+	public static String logRequest(Map<String, String> params, boolean validRequest) {	
+		try (Connection connection = connectToDB())
 		{
-			
 			String logQuery = "";
 			String customerExists_requestLogTable = getQueryResult("requestLog", "customerId=" + params.get("customerID"), "customerId", false);	
 			boolean customerExists_customerTable = true;
@@ -247,36 +299,15 @@ public class ServerAPI {
 	    }
 	}
 	
-	/* Function to create message response to send to client with regards to the successfulness of the request */
-	public static String createResponseMessage(boolean customerExists, boolean validRequest) {
-		String responseMessage = "";
-		
-		if(customerExists) {
-			if(validRequest) {
-				responseMessage = "Request Made Successfully";
-			}
-			else {
-				responseMessage = "Invalid Request. Request Was Unsuccessful";
-			}
-		}
-		else {
-			responseMessage = "CustomerID does not exist. Request Was Unsuccessful";
-		}
-		
-		return responseMessage;
-		
-	}
 	
-	/* Function to update hourly_stats table every hour */
-	public static void updateHourlyStatsTable() {
-		// Extracts the data from the requestLog table, iterates through it and adds the
-		// data to the hourly_stats table with the current timestamp before removing the
-		// data from the requetsLog table
-		
+	/*-
+	 * Function to remove the data from the requestLog table and add it to the hourly_stats table
+	 */
+	public static void updateHourlyStatsTable() {		
 		String timeStamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
-		System.out.println(timeStamp);
+		System.out.println("\n" + timeStamp);
 		
-		try (Connection connection = DriverManager.getConnection("jdbc:postgresql://localhost:5432/postgres", "postgres", "password"))
+		try (Connection connection = connectToDB())
 		{
 				String reqQuery = "SELECT * FROM requestLog";
 				
@@ -289,13 +320,15 @@ public class ServerAPI {
 		        			+ "cast(\'" + timeStamp + "\' AS TIMESTAMP), " + selectResult.getString("request_count") + "," + selectResult.getString("invalid_count") + ");";
 		        
 		        	PreparedStatement insertStmt = connection.prepareStatement(insertQuery);
-			        int insertResult = insertStmt.executeUpdate();
+			        
+		        	int insertResult = insertStmt.executeUpdate();
 			        if(insertResult > 0) {
 			        	System.out.println("Inserted Customer " + selectResult.getString("customerID") + " successfully into hourly_stats");
 			        }
 			        
 			        String deleteQuery = "DELETE FROM requestLog WHERE customerID = " + selectResult.getString("customerID") +";";
 			        PreparedStatement deleteStmt = connection.prepareStatement(deleteQuery);
+			        
 			        int deleteResult = deleteStmt.executeUpdate();
 			        if(deleteResult > 0) {
 			        	System.out.println("Customer " + selectResult.getString("customerID") + " successfully removed from requestLog\n");
@@ -306,5 +339,5 @@ public class ServerAPI {
 			System.out.println(e);
 		}
 	}
-	
+		
 }
