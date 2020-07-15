@@ -25,10 +25,6 @@ public class ClientAPI {
 	static String BLACKLISTED_UA_JSON = "{\"customerID\":2,\"tagID\":2,\"userID\":\"Googlebot\",\"remoteIP\":\"123.234.56.78\",\"timestamp\":1500000000}";
 	static String BLACKLISTED_IP_JSON = "{\"customerID\":2,\"tagID\":2,\"userID\":\"aaaaaaaa-bbbb-cccc-1111-222222222222\",\"remoteIP\":\"213.070.64.33\",\"timestamp\":1500000000}";
 	
-	static String DATE_FORMAT = "yyyy-MM-dd";
-	static String INVALID = "\nINVALID INPUT:  ";
-	
-	
 	
 	/*-
 	 * Function that returns the main client menu text
@@ -155,35 +151,29 @@ public class ClientAPI {
 	public static String getDateInput(Scanner inputScanner) {
 		String date_day;
 		String date_month;
-		String date_year;
-		String dateString = "";
-		boolean dateFormatValid = false;
-				
-		while(!dateFormatValid) {
-			System.out.println(getDateMenuText());
-			
-			do {
-				System.out.println("(dd) Day: " );
-				date_day = getUserInput(inputScanner);
-			}
-			while(Integer.parseInt(date_day) < 0);
-			 
-			do {
-				System.out.println("(mm) Month: " );
-				date_month = getUserInput(inputScanner);
-			}
-			while(Integer.parseInt(date_month) < 0);
-			
-			do {
-				System.out.println("(yyyy) Year: " );
-				date_year = getUserInput(inputScanner);
-			}
-			while(Integer.parseInt(date_year) < 0);
-			
-			dateFormatValid = checkDateFormat(dateString = date_year + "-" + date_month + "-" + date_day);
+		String date_year;				
+		
+		System.out.println(getDateMenuText());
+		
+		do {
+			System.out.println("(dd) Day: " );
+			date_day = getUserInput(inputScanner);
 		}
-			
-		return dateString;
+		while(Integer.parseInt(date_day) < 0);
+		 
+		do {
+			System.out.println("(mm) Month: " );
+			date_month = getUserInput(inputScanner);
+		}
+		while(Integer.parseInt(date_month) < 0);
+		
+		do {
+			System.out.println("(yyyy) Year: " );
+			date_year = getUserInput(inputScanner);
+		}
+		while(Integer.parseInt(date_year) < 0);
+							
+		return date_year + "-" + date_month + "-" + date_day;
 	}
 
 	
@@ -196,24 +186,6 @@ public class ClientAPI {
 			return true;
 		}
 		catch(Exception e){
-			return false;
-		}
-	}
-	
-	
-	/*-
-	 * Compares the given date string to the date format of the database,
-	 * by attempting to parse the string into the date format, and returns
-	 * a boolean value to denote the validity
-	 */
-	public static boolean checkDateFormat(String dateInput) {
-		DateFormat formatter = new SimpleDateFormat(DATE_FORMAT);
-		formatter.setLenient(false);
-		try {
-			formatter.parse(dateInput);
-		    return true;
-		} catch (Exception e) {
-			System.out.println(INVALID + "Invalid Date Format.\nUsage: <dd-mm-yyyy>");
 			return false;
 		}
 	}

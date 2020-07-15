@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -19,6 +20,8 @@ public class ServerAPI {
 	static String DB_URL = "jdbc:postgresql://localhost:5432/postgres";
 	static String DB_USER = "postgres";
 	static String DB_PWD = "password";
+	
+	static String DATE_FORMAT = "yyyy-MM-dd";
 	
 	/*-
 	 * Function to connect to Database using the static variables
@@ -111,6 +114,24 @@ public class ServerAPI {
 		
 		return validRequest;
 	}	
+	
+	
+	/*-
+	 * Compares the given date string to the date format of the database,
+	 * by attempting to parse the string into the date format, and returns
+	 * a boolean value to denote the validity
+	 */
+	public static boolean validateDateFormat(String dateInput) {
+		DateFormat formatter = new SimpleDateFormat(DATE_FORMAT);
+		formatter.setLenient(false);
+		try {
+			formatter.parse(dateInput);
+		    return true;
+		} catch (Exception e) {
+			System.out.println("Invalid date format used");
+			return false;
+		}
+	}
 	
 	
 	/*-

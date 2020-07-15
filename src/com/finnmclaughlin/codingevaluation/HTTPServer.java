@@ -129,6 +129,11 @@ public class HTTPServer {
 			String param_custID = params.get("id");
 			String param_date = params.get("date");
 			
+			if(!ServerAPI.validateDateFormat(param_date)) {
+				response = "Invalid Date Input: " + param_date;
+				param_date = null;
+			}
+			
 			if(param_custID != null && param_date != null) {
 				/*-
 				 * If the parameters ID and Date are present as part of the request parameters, a connection is made
