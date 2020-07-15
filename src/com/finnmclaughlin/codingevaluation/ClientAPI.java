@@ -47,7 +47,7 @@ public class ClientAPI {
 	 * type of request is to be sent to the server
 	 */
 	public static String getRequestOptionsText() {		
-		return "\nSend Request-----\n"
+		return "\nSend Valid Request-----\n"
 				+ "What request would you like to send to the server?\n"
 				+ "Valid Request (1)\n"
 				+ "Invalid Request (2)\n"
@@ -61,7 +61,8 @@ public class ClientAPI {
 	 * custom JSON string
 	 */
 	public static String getCustomerJSONRequestText() {
-		return "\nEnter custom JSON to send as request\n"
+		return "\nSend Custom JSON Request-----\n"
+				+ "Enter custom JSON to send as request\n"
 				+ "JSON: ";
 	}
 	
@@ -71,7 +72,8 @@ public class ClientAPI {
 	 * request is to be sent to the server 
 	 */
 	public static String getInvalidRequestOptionsText(){		
-		return "\nWhat type of invalid request would you like to send?\n"
+		return "\nSend Invalid Request-----\n"
+				+ "What type of invalid request would you like to send?\n"
 				+ "Malformed JSON (1)\n"
 				+ "Null Value JSON (2)\n"
 				+ "Non-Existing Customer (3)\n"
@@ -87,7 +89,8 @@ public class ClientAPI {
 	 * hourly statistics info is to be retrieved from the server 
 	 */
 	public static String getHourlyStatsMenuText() throws IOException {		
-		return "Which customer would you like to inquire about?\n"
+		return "\nHourly Statistics-----\n"
+				+ "Which customer would you like to inquire about?\n"
 				+ getCustomerNamesStringFormatted()
 				+ "Customer ID: ";
 	}
@@ -118,9 +121,10 @@ public class ClientAPI {
 	 * to prevent any invalid input that might cause any sort of issues, as well as clearing 
 	 * any found whitespace within the string    
 	 */
-	public static String getUserInput() {
-		String userInputString = readLine().replace(" ", "");
+	public static String getUserInput(Scanner inputScanner) {
 		
+		String userInputString = inputScanner.nextLine().replace(" ", "");
+				
 		if(ifValidInput(userInputString)) {
 			return userInputString;
 		}
@@ -132,35 +136,23 @@ public class ClientAPI {
 	
 	
 	/*-
-	 * Function to read in user input of custom JSON strings
+	 * Function to read in user input of custom JSON strings.
 	 * 
-	 * Although this function just calls another function that reads in
-	 * the line, I felt it was necessary to distinguish the difference
-	 * between the majority of the user inputs, which are of numeric string
-	 * values, and the custom JSON strings, as to avoid confusion
+	 * This is the one instance of the user input not being a
+	 * numeric value string, and so it does not need to be validated.
+	 * The server will validate whether the JSON string is malformed
+	 * or not.
 	 */
-	public static String getUserInput_JSON() {		
-		return readLine();		 
+	public static String getUserInput_JSON(Scanner inputScanner) {		
+		return inputScanner.nextLine();		 
 	}
 	
 	
-	/*-
-	 * Function to read user input
-	 */
-	public static String readLine() {
-		Scanner inputScanner = new Scanner(System.in);
-		String userInputString = inputScanner.nextLine();
-		inputScanner.close();
-		
-		return userInputString;
-	}
-
-		
 	/*-
 	 * Function that gets the user's date input, validating the
 	 * user's input each time.
 	 */
-	public static String getDateInput() {
+	public static String getDateInput(Scanner inputScanner) {
 		String date_day;
 		String date_month;
 		String date_year;
@@ -172,19 +164,19 @@ public class ClientAPI {
 			
 			do {
 				System.out.println("(dd) Day: " );
-				date_day = getUserInput();
+				date_day = getUserInput(inputScanner);
 			}
 			while(Integer.parseInt(date_day) < 0);
 			 
 			do {
 				System.out.println("(mm) Month: " );
-				date_month = getUserInput();
+				date_month = getUserInput(inputScanner);
 			}
 			while(Integer.parseInt(date_month) < 0);
 			
 			do {
 				System.out.println("(yyyy) Year: " );
-				date_year = getUserInput();
+				date_year = getUserInput(inputScanner);
 			}
 			while(Integer.parseInt(date_year) < 0);
 			

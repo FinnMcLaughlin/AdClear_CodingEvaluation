@@ -1,6 +1,8 @@
 package com.finnmclaughlin.codingevaluation;
 
 import java.io.IOException;
+import java.util.Scanner;
+
 import com.finnmclaughlin.codingevaluation.ClientAPI;
 
 public class HTTPClient {
@@ -8,10 +10,11 @@ public class HTTPClient {
 		// TODO Auto-generated method stub	
 				
 		boolean exitProgram = false;
+		Scanner inputScanner = new Scanner(System.in);
 		
 		while(!exitProgram) {
 			System.out.println(ClientAPI.getMenuText());
-			int userInput = Integer.parseInt(ClientAPI.getUserInput());			
+			int userInput = Integer.parseInt(ClientAPI.getUserInput(inputScanner));			
 				
 			if(userInput > 0) {
 				boolean backToMain = false;
@@ -21,7 +24,7 @@ public class HTTPClient {
 				case 1:
 					while(!backToMain) {
 						System.out.println(ClientAPI.getRequestOptionsText());
-						userInput = Integer.parseInt(ClientAPI.getUserInput());
+						userInput = Integer.parseInt(ClientAPI.getUserInput(inputScanner));
 						
 						switch(userInput) {
 						case 1:
@@ -31,7 +34,7 @@ public class HTTPClient {
 						
 						case 2:
 							System.out.println(ClientAPI.getInvalidRequestOptionsText());
-							userInput = Integer.parseInt(ClientAPI.getUserInput());
+							userInput = Integer.parseInt(ClientAPI.getUserInput(inputScanner));
 							if (userInput > 0 && userInput < 7) {
 								ClientAPI.sendRequest(userInput + 1);
 								backToMain = true;
@@ -44,7 +47,7 @@ public class HTTPClient {
 						
 						case 3:
 							System.out.println(ClientAPI.getCustomerJSONRequestText());
-							ClientAPI.sendRequest_customJSON(ClientAPI.getUserInput_JSON());
+							ClientAPI.sendRequest_customJSON(ClientAPI.getUserInput_JSON(inputScanner));
 							backToMain = true;
 							break;
 						
@@ -57,11 +60,11 @@ public class HTTPClient {
 				case 2:
 					while(!backToMain) {
 						System.out.println(ClientAPI.getHourlyStatsMenuText());
-						userInput = Integer.parseInt(ClientAPI.getUserInput());
+						userInput = Integer.parseInt(ClientAPI.getUserInput(inputScanner));
 						
 						if(userInput > 0 && userInput <= ClientAPI.getCustomerNamesCount()) {
 							int customerID = userInput;
-							String date = ClientAPI.getDateInput();
+							String date = ClientAPI.getDateInput(inputScanner);
 						
 							ClientAPI.getHourlyStats(customerID, date);
 							backToMain = true;
@@ -76,6 +79,7 @@ public class HTTPClient {
 
 				case 3:
 					System.out.println("Exiting Program...\n");
+					inputScanner.close();
 					exitProgram = true;
 					break;
 				
