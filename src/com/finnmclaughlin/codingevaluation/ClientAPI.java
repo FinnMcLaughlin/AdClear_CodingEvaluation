@@ -13,39 +13,26 @@ import java.util.Scanner;
 
 public class ClientAPI {
 	
+	static String JSON_REQUEST_URL = "http://localhost:8085/";
+	static String STATS_REQUEST_URL = "http://localhost:8085/stats";
+	static String NAMES_REQUEST_URL = "http://localhost:8085/stats/names";
+	
+	static String VALID_JSON = "{\"customerID\":2,\"tagID\":2,\"userID\":\"aaaaaaaa-bbbb-cccc-1111-222222222222\",\"remoteIP\":\"123.234.56.78\",\"timestamp\":1500000000}";
+	static String MALFORMED_JSON = "{\"customerID\":2,\"tagID\"2,\"userID\":\"aaaaaaaa-bbbb-cccc-1111-222222222222\",\"remoteIP\":\"123.234.56.78\",\"timestamp\":1500000000}";
+	static String MISSING_VALUE_JSON = "{\"customerID\":2,\"tagID\": ,\"userID\":\"aaaaaaaa-bbbb-cccc-1111-222222222222\",\"remoteIP\":\"123.234.56.78\",\"timestamp\":1500000000}";
+	static String NON_EXIST_CUST_JSON = "{\"customerID\":15,\"tagID\":2,\"userID\":\"aaaaaaaa-bbbb-cccc-1111-222222222222\",\"remoteIP\":\"123.234.56.78\",\"timestamp\":1500000000}";
+	static String INACTIVE_CUST_JSON = "{\"customerID\":3,\"tagID\":2,\"userID\":\"aaaaaaaa-bbbb-cccc-1111-222222222222\",\"remoteIP\":\"123.234.56.78\",\"timestamp\":1500000000}";
+	static String BLACKLISTED_UA_JSON = "{\"customerID\":2,\"tagID\":2,\"userID\":\"Googlebot\",\"remoteIP\":\"123.234.56.78\",\"timestamp\":1500000000}";
+	static String BLACKLISTED_IP_JSON = "{\"customerID\":2,\"tagID\":2,\"userID\":\"aaaaaaaa-bbbb-cccc-1111-222222222222\",\"remoteIP\":\"213.070.64.33\",\"timestamp\":1500000000}";
+	
 	static String DATE_FORMAT = "yyyy-MM-dd";
 	static String INVALID = "\nINVALID INPUT:  ";
 	
-	public static String getUserInput() {
-		Scanner inputScanner = new Scanner(System.in);
-		String userInputString = inputScanner.nextLine().replace(" ", "");
-		
-		if(ifValidInput(userInputString)) {
-			return userInputString;
-		}
-		else {
-			System.out.println("\nINVALID INPUT: " + userInputString + "\nMust be integer\n\n");
-			return "-1";
-		}		 
-	}
 	
-	public static String getUserInput_JSON() {
-		Scanner inputScanner = new Scanner(System.in);
-		String userInputString = inputScanner.nextLine();
-		
-		return userInputString;		 
-	}
 	
-	public static boolean ifValidInput(String userInputString) {
-		try {
-			Integer.parseInt(userInputString);
-			return true;
-		}
-		catch(Exception e){
-			return false;
-		}
-	}
-	
+	/*-
+	 * Function that returns the main client menu text
+	 */
 	public static String getMenuText() {
 		return "\n-----MAIN-----\n"
 				+ "Send Request to Server (1)\n"
@@ -54,6 +41,11 @@ public class ClientAPI {
 				+ "What would you like to do? (Enter the digit)";
 	}
 	
+	
+	/*-
+	 * Function that returns the text prompting the user on which 
+	 * type of request is to be sent to the server
+	 */
 	public static String getRequestOptionsText() {		
 		return "\nSend Request-----\n"
 				+ "What request would you like to send to the server?\n"
@@ -63,11 +55,21 @@ public class ClientAPI {
 				+ "Request Type: ";
 	}
 	
+	
+	/*-
+	 * Function that returns the text prompting the user to input their
+	 * custom JSON string
+	 */
 	public static String getCustomerJSONRequestText() {
 		return "\nEnter custom JSON to send as request\n"
 				+ "JSON: ";
 	}
 	
+	
+	/*-
+	 * Function that returns the text prompting the user on which invalid
+	 * request is to be sent to the server 
+	 */
 	public static String getInvalidRequestOptionsText(){		
 		return "\nWhat type of invalid request would you like to send?\n"
 				+ "Malformed JSON (1)\n"
@@ -79,16 +81,85 @@ public class ClientAPI {
 				+ "Request Type: ";
 	}
 	
+	
+	/*-
+	 * Function that returns the text prompting the user on which customer's
+	 * hourly statistics info is to be retrieved from the server 
+	 */
 	public static String getHourlyStatsMenuText() throws IOException {		
 		return "Which customer would you like to inquire about?\n"
 				+ getCustomerNamesStringFormatted()
 				+ "Customer ID: ";
 	}
-		
+	
+	
+	/*-
+	 * Function that returns the text prompting the user to input the date
+	 * of the data to be retrieved from the server in relation to viewing
+	 * hourly statistics
+	 */
 	public static String getDateMenuText() {	
 		return "What date would you like to inquire about?\n";
 	}
 	
+	
+	/*-
+	 * Function that reads user input and validate that it is of numeric
+	 * string value.
+	 * 
+	 * Most user input read by the client must be of numeric value, as most of
+	 * the input consists of choosing between options in the UI menu or inputting a
+	 * date value, although these user inputs are read in as strings. This is done
+	 * due to the date dropping the initial '0' when being read in as an integer before
+	 * being sent to the server to retrieve hourly statistics (i.e. 14-07-2020 became 14-7-2020)
+	 * which prevented any retrieval of data from the tables, as the format had then changed.
+	 * 
+	 * However these inputs are still need to be validated to ensure they are of numeric value,
+	 * to prevent any invalid input that might cause any sort of issues, as well as clearing 
+	 * any found whitespace within the string    
+	 */
+	public static String getUserInput() {
+		String userInputString = readLine().replace(" ", "");
+		
+		if(ifValidInput(userInputString)) {
+			return userInputString;
+		}
+		else {
+			System.out.println("\nINVALID INPUT: " + userInputString + "\nMust be integer\n\n");
+			return "-1";
+		}		 
+	}
+	
+	
+	/*-
+	 * Function to read in user input of custom JSON strings
+	 * 
+	 * Although this function just calls another function that reads in
+	 * the line, I felt it was necessary to distinguish the difference
+	 * between the majority of the user inputs, which are of numeric string
+	 * values, and the custom JSON strings, as to avoid confusion
+	 */
+	public static String getUserInput_JSON() {		
+		return readLine();		 
+	}
+	
+	
+	/*-
+	 * Function to read user input
+	 */
+	public static String readLine() {
+		Scanner inputScanner = new Scanner(System.in);
+		String userInputString = inputScanner.nextLine();
+		inputScanner.close();
+		
+		return userInputString;
+	}
+
+		
+	/*-
+	 * Function that gets the user's date input, validating the
+	 * user's input each time.
+	 */
 	public static String getDateInput() {
 		String date_day;
 		String date_month;
@@ -123,6 +194,26 @@ public class ClientAPI {
 		return dateString;
 	}
 
+	
+	/*-
+	 * Function to check that the user input string is numeric
+	 */
+	public static boolean ifValidInput(String userInputString) {
+		try {
+			Integer.parseInt(userInputString);
+			return true;
+		}
+		catch(Exception e){
+			return false;
+		}
+	}
+	
+	
+	/*-
+	 * Compares the given date string to the date format of the database,
+	 * by attempting to parse the string into the date format, and returns
+	 * a boolean value to denote the validity
+	 */
 	public static boolean checkDateFormat(String dateInput) {
 		DateFormat formatter = new SimpleDateFormat(DATE_FORMAT);
 		formatter.setLenient(false);
@@ -135,137 +226,212 @@ public class ClientAPI {
 		}
 	}
 	
+	
+	/*-
+	 * Function to retrieve the customer's from the server
+	 */
 	public static String getCustomerNames() throws IOException {		
-		URL url = new URL("http://localhost:8085/test/names");
-		HttpURLConnection con = (HttpURLConnection) url.openConnection();
-		con.setRequestMethod("GET");
-		con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-		
-		String names = readResponse(con);
-				
-		disconnectHttpURL(con);
-	
-		return names;
-	}
-	
-	public static String formatResponseMessages(String respMessage, boolean indexMessage) {
-		String formattedMessage = "";
-						
-		if(respMessage.split("&&&").length > 0) {
-			for(int nameIndex=0; nameIndex < respMessage.split("&&&").length; nameIndex++) {
-				
-				if(indexMessage) {
-					formattedMessage = formattedMessage + respMessage.split("&&&")[nameIndex] + " (" + (nameIndex+1) + ")\n";
-				}
-				else {
-					formattedMessage = formattedMessage + respMessage.split("&&&")[nameIndex] + "\n";
-				}
-				
-			}
+		try{
+			URL url = new URL(NAMES_REQUEST_URL);
+			HttpURLConnection con = connectHttpURL(url);
+			con.setRequestMethod("GET");
+			con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+			
+			String names = readResponse(con);
+							
+			disconnectHttpURL(con);
+			
+			return names;
 		}
-		else {
-			formattedMessage = "\nNO DATA FOUND";
+		catch(Exception e) {
+			return "Cannot Connect to Server";
 		}
-					
-		return formattedMessage;
 	}
+
 	
+	/*-
+	 * Function to return the customer names, formatted and indexed, for the purpose
+	 * of giving the user a list of options to choose from when requesting hourly 
+	 * statistic info
+	 */
 	public static String getCustomerNamesStringFormatted() throws IOException {					
-		return formatResponseMessages(getCustomerNames(), true);
+		return formatResponseString(getCustomerNames(), true);
 	}
 	
+	
+	/*-
+	 * Function to retrieve the number of customers present in the customer table, from
+	 * the server
+	 */
 	public static int getCustomerNamesCount() throws IOException{
 		return getCustomerNames().split("&&&").length;
 	}
 	
-	public static String getRequestString(int index) {
+	
+	/*-
+	 * Function to return the specified request JSON string to be sent to the server based
+	 * on the given index 
+	 */
+	public static String getPreSetJSON(int index) {
 						
 		switch(index) {
 		/* Valid JSON */
 		case 1:
-			return "{\"customerID\":2,\"tagID\":2,\"userID\":\"aaaaaaaa-bbbb-cccc-1111-222222222222\",\"remoteIP\":\"123.234.56.78\",\"timestamp\":1500000000}";
+			return VALID_JSON;
 		
-		/* Malformed JSON */ //----- TODO
+		/* Malformed JSON */
 		case 2:
-			return "{\"customerID\":2,\"tagID\"2,\"userID\":\"aaaaaaaa-bbbb-cccc-1111-222222222222\",\"remoteIP\":\"123.234.56.78\",\"timestamp\":1500000000}";
+			return MALFORMED_JSON;
 		
 		/* Null Value JSON */
 		case 3:
-			return "{\"customerID\":2,\"tagID\": ,\"userID\":\"aaaaaaaa-bbbb-cccc-1111-222222222222\",\"remoteIP\":\"123.234.56.78\",\"timestamp\":1500000000}";
+			return MISSING_VALUE_JSON;
 		
 		/* Customer Does not exist */
 		case 4:
-			return "{\"customerID\":15,\"tagID\":2,\"userID\":\"aaaaaaaa-bbbb-cccc-1111-222222222222\",\"remoteIP\":\"123.234.56.78\",\"timestamp\":1500000000}";
+			return NON_EXIST_CUST_JSON;
 		
 		/* Inactive Customer */
 		case 5:
-			return "{\"customerID\":3,\"tagID\":2,\"userID\":\"aaaaaaaa-bbbb-cccc-1111-222222222222\",\"remoteIP\":\"123.234.56.78\",\"timestamp\":1500000000}";
+			return INACTIVE_CUST_JSON;
 		
 		/* Blacklisted UserAgent */
 		case 6:
-			return "{\"customerID\":2,\"tagID\":2,\"userID\":\"Googlebot\",\"remoteIP\":\"123.234.56.78\",\"timestamp\":1500000000}";
+			return BLACKLISTED_UA_JSON;
 		
 		/* Blacklist IP Address */
 		case 7:
-			return "{\"customerID\":2,\"tagID\":2,\"userID\":\"aaaaaaaa-bbbb-cccc-1111-222222222222\",\"remoteIP\":\"213.070.64.33\",\"timestamp\":1500000000}";
+			return BLACKLISTED_IP_JSON;
 			
 		default: return "";
 		}
 	}
 	
+	
+	/*-
+	 * Function to send a pre-set JSON to the server. The pre-set JSON is picked by
+	 * the user, and the index of which is sent to getPreSetJSON(), which returns
+	 * the JSON string before sending it to the server. The response from the server
+	 * is read and displayed for the user
+	 */
 	public static void sendRequest(int requestType) throws IOException {
-		URL url = new URL("http://localhost:8085/");
-		HttpURLConnection con = (HttpURLConnection) url.openConnection();
+		URL url = new URL(JSON_REQUEST_URL);
+		HttpURLConnection con = connectHttpURL(url);
 		con.setRequestMethod("POST");
 		con.setRequestProperty("Content-Type", "application/json");	
 		
-		String reqString = getRequestString(requestType);
+		String reqString = getPreSetJSON(requestType);
 		
 		System.out.println("JSON: " + reqString);
 		
-		con.setDoOutput(true);
-		DataOutputStream out = new DataOutputStream(con.getOutputStream());
-		out.writeBytes(reqString);
-		out.flush();
-		out.close();
+		writeToServer(con, reqString);
 		
 		System.out.println(readResponse(con));
 		
 		disconnectHttpURL(con);
 	}
 	
+	
+	/*-
+	 * Function to send a custom JSON to the server. The custom JSON is given by
+	 * the user, and is sent to the server. The response from the server is read
+	 * and displayed for the user
+	 */
 	public static void sendRequest_customJSON(String json_String) throws IOException {
-		URL url = new URL("http://localhost:8085/");
-		HttpURLConnection con = (HttpURLConnection) url.openConnection();
+		URL url = new URL(JSON_REQUEST_URL);
+		HttpURLConnection con = connectHttpURL(url);
 		con.setRequestMethod("POST");
 		con.setRequestProperty("Content-Type", "application/json");
 		
 		System.out.println("JSON: " + json_String);
-				
-		con.setDoOutput(true);
-		DataOutputStream out = new DataOutputStream(con.getOutputStream());
-		out.writeBytes(json_String);
-		out.flush();
-		out.close();
+		
+		writeToServer(con, json_String);
 		
 		System.out.println(readResponse(con));
 		
 		disconnectHttpURL(con);
 	}
 	
+	
+	/*-
+	 * Function that retrieves the hourly statistics of a specific customer on a specific
+	 * date from the server, and displays them to the user. The specific customer is found
+	 * using the given customer ID, and the specific date is found using the given date string,
+	 * both of which are sent as parameters to the server.
+	 */
 	public static void getHourlyStats(int custId, String date) throws IOException {
 		String params = "id=" + custId + "&date=" + date;
 				
-		URL url = new URL("http://localhost:8085/test?" + params);
-		HttpURLConnection con = (HttpURLConnection) url.openConnection();
+		URL url = new URL(STATS_REQUEST_URL + "?" + params);
+		HttpURLConnection con = connectHttpURL(url);
 		con.setRequestMethod("GET");
 		con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
 		
-		System.out.println("\n" + formatResponseMessages(readResponse(con), false));
+		System.out.println("\n" + formatResponseString(readResponse(con), false));
 		
 		disconnectHttpURL(con);
 	}
 	
+	
+	/*-
+	 * Function to format the response from the server.
+	 * 
+	 * Due to '\n' not being recognised as a line break when sent from the server as a response,
+	 * "&&&" has been used to denote a line break, and so when formatting the response message,
+	 * the message is split where "&&&" is found.
+	 * 
+	 * A boolean is sent to the function to denote whether each new line of the response is to be
+	 * indexed, such as when the response text is used as part of the client UI (i.e. displaying
+	 * the customer names). 
+	 */
+	public static String formatResponseString(String respString, boolean indexMessage) {
+		String formattedResponse = "";
+						
+		if(respString.split("&&&").length > 0) {
+			for(int nameIndex=0; nameIndex < respString.split("&&&").length; nameIndex++) {
+				
+				if(indexMessage) {
+					formattedResponse = formattedResponse + respString.split("&&&")[nameIndex] + " (" + (nameIndex+1) + ")\n";
+				}
+				else {
+					formattedResponse = formattedResponse + respString.split("&&&")[nameIndex] + "\n";
+				}
+				
+			}
+		}
+		else {
+			formattedResponse = "\nNO DATA FOUND";
+		}
+					
+		return formattedResponse;
+	}
+	
+	
+	/*-
+	 * Function sends a given string to a server by opening a data output stream. The 
+	 * server is given via the HttpURLConnection sent to the function.  
+	 */
+	public static void writeToServer(HttpURLConnection connection, String messageString) {
+		
+		try {
+			connection.setDoOutput(true);
+			DataOutputStream out = new DataOutputStream(connection.getOutputStream());
+			out.writeBytes(messageString);
+			out.flush();
+			out.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			System.out.println("\nCANNOT WRITE TO SERVER\n");
+		}
+		
+	}
+	
+	
+	/*-
+	 * Function that reads the response given from a server by opening an input stream
+	 * reader, before returning the response as a string. The server is given via the
+	 * HttpURLConnection sent to the function. 
+	 */
 	public static String readResponse(HttpURLConnection con) throws IOException {
 		BufferedReader in = new BufferedReader(
 				  new InputStreamReader(con.getInputStream()));
@@ -279,7 +445,19 @@ public class ClientAPI {
 		return content.toString();
 	}
 	
-	public static void disconnectHttpURL(HttpURLConnection con) {
-		con.disconnect();
+	
+	/*-
+	 * Function to create an open HTTP connection with the given URL
+	 */
+	public static HttpURLConnection connectHttpURL(URL url) throws IOException {
+		return (HttpURLConnection) url.openConnection();
+	}
+	
+	
+	/*-
+	 * Function to disconnect the given HttpURLConnection
+	 */
+	public static void disconnectHttpURL(HttpURLConnection connection) {
+		connection.disconnect();
 	}
 }

@@ -34,8 +34,7 @@ public class ServerAPI {
 	 * by looking for missing parameter values and explicitly stating "null"
 	 * for future validation, before placing the values within a Hashmap and
 	 * returning it. Most of the functionality of the function is surrounded
-	 * within a try/catch, where if unsuccessful indicates whether the the 
-	 * JSON is malformed
+	 * within a try/catch, where if unsuccessful that whether the JSON is malformed
 	 */
 	public static Map<String, String> formatJSON(String inputStream){		
 		Map<String, String> key_values = new HashMap<String, String>();
@@ -301,7 +300,9 @@ public class ServerAPI {
 	
 	
 	/*-
-	 * Function to remove the data from the requestLog table and add it to the hourly_stats table
+	 * Function to remove the data from the requestLog table and add it to the hourly_stats table.
+	 * A timestamp is created and added with each entry to denote the hour in which the transfer
+	 * takes place.
 	 */
 	public static void updateHourlyStatsTable() {		
 		String timeStamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
