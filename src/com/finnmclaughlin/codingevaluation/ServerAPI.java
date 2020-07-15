@@ -58,12 +58,7 @@ public class ServerAPI {
 			}
 		}
 		catch(JSONException e) {
-			System.out.println("MALFORMED JSON");
-			//TO DO-----------------------------------------------------------------------
-			if(inputStream.contains("\"customerID\":")) {
-				System.out.println("CustomerID Exists");
-				System.out.println(inputStream.substring(inputStream.lastIndexOf("\"customerID\":") + 1));
-			}
+			System.out.println("MALFORMED JSON\n");
 		}
 		
 		return key_values;

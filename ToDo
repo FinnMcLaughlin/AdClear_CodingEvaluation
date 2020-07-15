@@ -8,6 +8,4 @@
 - Create an endpoint to get the statistics: for a specific customer + a specific day.x
 	The response must also contain the total number of requests for that day
 	
-	
-- Check for customer ID in malformed JSON
-- "\n" for requests from browser as opposed to "&&&"
+- "\n" for requests from browser as opposed to "&&&" x

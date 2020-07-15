@@ -155,11 +155,13 @@ public class HTTPServer {
 			        while(selectResult.next()) {
 			        	/*-
 			        	 * '\n' was not being registered when sent as part of the response string, "&&&" is added to the
-			        	 * end of each iteration to distinguish between each data entry returned from the table
+			        	 * end of each iteration to distinguish between each data entry returned from the table. '\n' are
+			        	 * added as well as to create a neater output for hourly statistic calls made from the browser,
+			        	 * which does read the line breaks
 			        	 */
 			        	response = response + "(" + selectResult.getString("time") + ") "
 			        			+ selectResult.getString("name") + " -> Valid Requests: " + selectResult.getString("request_count") + " | Invalid Requests: "
-			        			+ selectResult.getString("invalid_count") + "&&&"; 
+			        			+ selectResult.getString("invalid_count") + "\n&&&\n"; 
 			        }
 				}
 				catch(Exception e) {
