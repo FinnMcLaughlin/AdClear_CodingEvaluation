@@ -47,7 +47,7 @@ public class ServerAPI {
 		
 		return info;
 	}
-		
+	
 	/* Function to format the parameters sent to deal with the hourly_stats */
 	public static Map<String, String> formatRequestBody(String reqBody){
 		// Formats the given request body string to be further utilised by
@@ -167,7 +167,7 @@ public class ServerAPI {
 	        return "Connection Failure";
 	    }
 	}
-
+	
 	/* Function log each request made to the server, based on the customerID and whether the
 	   request made was a valid request or not */
 	public static String logRequest(Map<String, String> params, boolean validRequest) {
@@ -246,7 +246,7 @@ public class ServerAPI {
 	        return "Database Error. Request Was Unsuccessful";
 	    }
 	}
-
+	
 	/* Function to create message response to send to client with regards to the successfulness of the request */
 	public static String createResponseMessage(boolean customerExists, boolean validRequest) {
 		String responseMessage = "";
@@ -306,5 +306,5 @@ public class ServerAPI {
 			System.out.println(e);
 		}
 	}
-
+	
 }

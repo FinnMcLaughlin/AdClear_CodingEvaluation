@@ -80,6 +80,7 @@ public class HTTPClient {
 					System.out.println("Exiting Program...\n");
 					exitProgram = true;
 					break;
+				
 					
 				default:
 					System.out.println("Invalid");
@@ -89,4 +90,3 @@ public class HTTPClient {
 		
 	}
 }
-

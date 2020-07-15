@@ -1,7 +1,7 @@
 - Server on LocalHost x
 - Database x
 - Connect Database to Server and Display x
-- Stub Function to pass requests to server
+- Stub Function to pass requests to server x
 - Parse requests x
 - Check validation of requests, reject invalid requests x
 - Count and store statistics per customer per hour x
