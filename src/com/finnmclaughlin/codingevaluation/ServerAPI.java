@@ -312,10 +312,10 @@ public class ServerAPI {
 				PreparedStatement stmt = connection.prepareStatement(logQuery);
 		        int rs = stmt.executeUpdate();
 		        if(rs > 0) {
-		        	System.out.println("Request Log Successful");
+		        	System.out.println("Request Log Successful\n\n");
 		        }
 		        else {
-		        	System.out.println("Request Log UnSuccessful");
+		        	System.out.println("Request Log UnSuccessful\n\n");
 		        }
 			}
 						
