@@ -22,6 +22,8 @@ import com.sun.net.httpserver.HttpServer;
 import com.finnmclaughlin.codingevaluation.ServerAPI;
 		
 public class HTTPServer {
+	
+	static int PORT_NUMBER = 8085;
 
 	/*-
 	 * Initialises server and it's various handlers upon initial run, before starting
@@ -32,7 +34,7 @@ public class HTTPServer {
 	public static void main(String[] args) throws IOException {
 		
 		try {
-			HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 8085), 0);
+			HttpServer server = HttpServer.create(new InetSocketAddress("localhost", PORT_NUMBER), 0);
 			HttpContext jsonRequests = server.createContext("/");
 			jsonRequests.setHandler(arg0 -> {
 				try {
