@@ -39,6 +39,8 @@ request_count bigint check (request_count >= 0) NOT NULL,
 invalid_count bigint check (invalid_count >= 0) NOT NULL
 );
 
+Database connection information can be added by changing the static strings near the top of ServerAPI.java, likewise the desired port number to run the server on can be added by changing the static int near the top of HTTPServer.java.
+
 Run HTTPServer, followed by HTTPClient, and follow the HTTPClient UI in the console log to execute tasks.
 
 
