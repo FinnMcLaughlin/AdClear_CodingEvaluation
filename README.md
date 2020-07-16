@@ -1,6 +1,7 @@
 # AdClear_CodingEvaluation
 
 -----About--------------
+
 HTTPServer main executes the functionality outlined in the program specification. Upon running HTTPServer,
 the server itself starts, the various handlers are initialized, which call the functions within ServerAPI,
 which holds the majority of the functionality code.
@@ -23,6 +24,7 @@ The database used was PostgreSQL
 
 
 -----Setting Up and Running--------------
+
 !!!MUST BE RUN IN AN IDE!!!
 
 Clone the repository and import the folder into the IDE (preferably Eclipse)
