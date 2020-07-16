@@ -81,10 +81,17 @@ public class HTTPClient {
 				/* Case to handle retrieving data from the hourly_stats table */
 				case 2:
 					while(!backToMain) {
-						System.out.println(ClientAPI.getHourlyStatsMenuText());
+						String hourlyStatsMenuText = ClientAPI.getHourlyStatsMenuText();
+						int customerCount = ClientAPI.getCustomerNamesCount();
+						System.out.println(hourlyStatsMenuText);
+						
+						if(hourlyStatsMenuText.contains("Unable To Connect") || customerCount == -1) {
+							break;
+						}
+						
 						userInput = Integer.parseInt(ClientAPI.getUserInput(inputScanner));
 						
-						if(userInput > 0 && userInput <= ClientAPI.getCustomerNamesCount()) {
+						if(userInput > 0 && userInput <= customerCount) {
 							int customerID = userInput;
 							String date = ClientAPI.getDateInput(inputScanner);
 						

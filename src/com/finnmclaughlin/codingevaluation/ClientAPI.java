@@ -82,13 +82,32 @@ public class ClientAPI {
 	
 	/*-
 	 * Function that returns the text prompting the user on which customer's
-	 * hourly statistics info is to be retrieved from the server 
+	 * hourly statistics info is to be retrieved from the server.
+	 * 
+	 * Because it is displaying information received from the server, error
+	 * checking is put in place. If getCustomerNames() returns null, then
+	 * there was difficulty either reading or writing to the server. If the
+	 * length of the message before the first index (i.e. ("1")) is less
+	 * than 1, then no data was returned from the server.
 	 */
-	public static String getHourlyStatsMenuText() throws IOException {		
-		return "\nHourly Statistics-----\n"
-				+ "Which customer would you like to inquire about?\n"
-				+ getCustomerNamesStringFormatted()
-				+ "Customer ID: ";
+	public static String getHourlyStatsMenuText() throws IOException {
+		String customerNames;
+		
+		if((customerNames = getCustomerNames()) == null) {
+			return "\nHourly Statistics-----\n"
+					+ "Unable To Connect\n";
+		}
+		else if(customerNames.split("(1)")[0].length() < 1) {
+			return "\nHourly Statistics-----\n"
+					+ "No Customers Found in table";
+		}
+		else {
+			return "\nHourly Statistics-----\n"
+					+ "Which customer would you like to inquire about?\n"
+					+ getCustomerNamesStringFormatted(customerNames)
+					+ "Customer ID: ";
+		}
+		
 	}
 	
 	
@@ -218,8 +237,8 @@ public class ClientAPI {
 	 * of giving the user a list of options to choose from when requesting hourly 
 	 * statistic info
 	 */
-	public static String getCustomerNamesStringFormatted() throws IOException {					
-		return formatResponseString(getCustomerNames(), true);
+	public static String getCustomerNamesStringFormatted(String customerNames) throws IOException {					
+		return formatResponseString(customerNames, true);
 	}
 	
 	
@@ -228,7 +247,14 @@ public class ClientAPI {
 	 * the server
 	 */
 	public static int getCustomerNamesCount() throws IOException{
-		return getCustomerNames().split("&&&").length;
+		String customerNames;
+		
+		if((customerNames = getCustomerNames()) == null) {
+			return -1;
+		}
+		else {
+			return customerNames.split("&&&").length;
+		}
 	}
 	
 	
@@ -280,19 +306,28 @@ public class ClientAPI {
 	 */
 	public static void sendRequest(int requestType) throws IOException {
 		URL url = new URL(JSON_REQUEST_URL);
-		HttpURLConnection con = connectHttpURL(url);
-		con.setRequestMethod("POST");
-		con.setRequestProperty("Content-Type", "application/json");	
+		String response = "";
 		
-		String reqString = getPreSetJSON(requestType);
-		
-		System.out.println("JSON: " + reqString);
-		
-		writeToServer(con, reqString);
-		
-		System.out.println(readResponse(con));
-		
-		disconnectHttpURL(con);
+		try {
+			HttpURLConnection con = connectHttpURL(url);
+			con.setRequestMethod("POST");
+			con.setRequestProperty("Content-Type", "application/json");	
+			
+			String reqString = getPreSetJSON(requestType);
+			
+			System.out.println("JSON: " + reqString);
+			
+			writeToServer(con, reqString);
+			
+			if((response = readResponse(con)) != null) {
+				System.out.println(response);
+			}
+			
+			disconnectHttpURL(con);
+		}
+		catch(Exception e) {
+			System.out.println("Send Request Failed");
+		}
 	}
 	
 	
@@ -303,17 +338,26 @@ public class ClientAPI {
 	 */
 	public static void sendRequest_customJSON(String json_String) throws IOException {
 		URL url = new URL(JSON_REQUEST_URL);
-		HttpURLConnection con = connectHttpURL(url);
-		con.setRequestMethod("POST");
-		con.setRequestProperty("Content-Type", "application/json");
+		String response;
 		
-		System.out.println("JSON: " + json_String);
-		
-		writeToServer(con, json_String);
-		
-		System.out.println(readResponse(con));
-		
-		disconnectHttpURL(con);
+		try{	
+			HttpURLConnection con = connectHttpURL(url);
+			con.setRequestMethod("POST");
+			con.setRequestProperty("Content-Type", "application/json");
+			
+			System.out.println("JSON: " + json_String);
+			
+			writeToServer(con, json_String);
+			
+			if((response = readResponse(con)) != null) {
+				System.out.println(response);
+			}
+			
+			disconnectHttpURL(con);
+		}
+		catch(Exception e) {
+			System.out.println("Send Request Failed");
+		}
 	}
 	
 	
@@ -327,13 +371,20 @@ public class ClientAPI {
 		String params = "id=" + custId + "&date=" + date;
 				
 		URL url = new URL(STATS_REQUEST_URL + "?" + params);
-		HttpURLConnection con = connectHttpURL(url);
-		con.setRequestMethod("GET");
-		con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
 		
-		System.out.println("\n" + formatResponseString(readResponse(con), false));
-		
-		disconnectHttpURL(con);
+		try{
+			HttpURLConnection con = connectHttpURL(url);
+			
+			con.setRequestMethod("GET");
+			con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+			
+			System.out.println("\n" + formatResponseString(readResponse(con), false));
+			
+			disconnectHttpURL(con);
+		}
+		catch(Exception e) {
+			System.out.println("\nCannot get hourly statistics\nIssue Connecting to Server");
+		}
 	}
 	
 	
@@ -376,7 +427,6 @@ public class ClientAPI {
 	 * server is given via the HttpURLConnection sent to the function.  
 	 */
 	public static void writeToServer(HttpURLConnection connection, String messageString) {
-		
 		try {
 			connection.setDoOutput(true);
 			DataOutputStream out = new DataOutputStream(connection.getOutputStream());
@@ -397,16 +447,22 @@ public class ClientAPI {
 	 * HttpURLConnection sent to the function. 
 	 */
 	public static String readResponse(HttpURLConnection con) throws IOException {
-		BufferedReader in = new BufferedReader(
-				  new InputStreamReader(con.getInputStream()));
-				String inputLine;
-				StringBuffer content = new StringBuffer();
-				while ((inputLine = in.readLine()) != null) {
-				    content.append(inputLine);
-				}
-				in.close();		
+		try {
+			BufferedReader in = new BufferedReader(
+					  new InputStreamReader(con.getInputStream()));
+					String inputLine;
+					StringBuffer content = new StringBuffer();
+					while ((inputLine = in.readLine()) != null) {
+					    content.append(inputLine);
+					}
+					in.close();		
+			
+			return content.toString();
+		}
+		catch(Exception e) {
+			return null;
+		}
 		
-		return content.toString();
 	}
 	
 	
