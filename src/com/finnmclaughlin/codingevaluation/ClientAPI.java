@@ -335,6 +335,12 @@ public class ClientAPI {
 	 * Function to send a custom JSON to the server. The custom JSON is given by
 	 * the user, and is sent to the server. The response from the server is read
 	 * and displayed for the user
+	 * 
+	 * When a very malformed JSON was being sent (e.g. "{}") the server would execute
+	 * as normal when dealing with a malformed JSON, although the client would read a
+	 * empty string upon receiving the response. To combat this, the function checks
+	 * whether the response is an empty string, and if so it would be counted as a
+	 * malformed JSON response message from the server. 
 	 */
 	public static void sendRequest_customJSON(String json_String) throws IOException {
 		URL url = new URL(JSON_REQUEST_URL);
@@ -350,6 +356,10 @@ public class ClientAPI {
 			writeToServer(con, json_String);
 			
 			if((response = readResponse(con)) != null) {
+				if(response.length() < 1) {
+					System.out.println("Request Was Unsuccessful. Malformed JSON");
+				}
+				
 				System.out.println(response);
 			}
 			
@@ -456,7 +466,7 @@ public class ClientAPI {
 					    content.append(inputLine);
 					}
 					in.close();		
-			
+					
 			return content.toString();
 		}
 		catch(Exception e) {

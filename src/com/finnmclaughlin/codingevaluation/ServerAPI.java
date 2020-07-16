@@ -53,8 +53,13 @@ public class ServerAPI {
 			
 			JSONArray keys = json.names();
 			
-			for(int keyIndex=0; keyIndex < keys.length(); keyIndex++) {
-				key_values.put(keys.getString(keyIndex), json.get(keys.getString(keyIndex)).toString());
+			if(keys != null) {
+				for(int keyIndex=0; keyIndex < keys.length(); keyIndex++) {
+					key_values.put(keys.getString(keyIndex), json.get(keys.getString(keyIndex)).toString());
+				}
+			}
+			else {
+				key_values.put("Malformed_JSON", "null");
 			}
 		}
 		catch(JSONException e) {
@@ -74,9 +79,9 @@ public class ServerAPI {
 	 */
 	public static boolean validateJSONRequest(Map<String, String> params) {		
 		boolean validRequest = true;
-				
+		
 		//Missing Value
-		for(Map.Entry<String, String> parameter : params.entrySet()) {			
+		for(Map.Entry<String, String> parameter : params.entrySet()) {	
 			if(parameter.getValue().compareTo("null") == 0) {
 				validRequest = false;
 				break;
@@ -196,7 +201,6 @@ public class ServerAPI {
 	        while ( rs.next() )
 	        {
 	        	response = response + rs.getString(column) + result_split;
-	        	//System.out.println("Result: " + rs.getString(column));
 	        }	
 	        	        
 	        return response;
@@ -213,22 +217,28 @@ public class ServerAPI {
 	
 	/*-
 	 * Function to create a response message following a JSON request. The response message
-	 * is determined by whether the customer ID exists in the customer table, if not it cannot
-	 * be logged in the requestLog table, and if the JSON request is in itself a valid request
+	 * is determined by whether the JSON string was malformed, if the customer ID exists in
+	 * the customer table (if not it cannot be logged in the requestLog table), and if the
+	 * JSON request is in itself a valid request
 	 */
-	public static String createResponseMessage(boolean customerExists, boolean validRequest) {
+	public static String createResponseMessage(boolean malformedJSON, boolean customerExists, boolean validRequest) {
 		String responseMessage = "";
 		
-		if(customerExists) {
-			if(validRequest) {
-				responseMessage = "Request Made Successfully";
-			}
-			else {
-				responseMessage = "Invalid Request. Request Was Unsuccessful";
-			}
+		if(malformedJSON) {
+			responseMessage = "Request Was Unsuccessful. Malformed JSON";
 		}
 		else {
-			responseMessage = "CustomerID does not exist. Request Was Unsuccessful";
+			if(customerExists) {
+				if(validRequest) {
+					responseMessage = "Request Made Successfully";
+				}
+				else {
+					responseMessage = "Invalid Request. Request Was Unsuccessful";
+				}
+			}
+			else {
+				responseMessage = "CustomerID does not exist. Request Was Unsuccessful";
+			}
 		}
 		
 		return responseMessage;	
@@ -247,49 +257,55 @@ public class ServerAPI {
 	public static String logRequest(Map<String, String> params, boolean validRequest) {	
 		try (Connection connection = connectToDB())
 		{
+			String custID = params.get("customerID");
 			String logQuery = "";
-			String customerExists_requestLogTable = getQueryResult("requestLog", "customerId=" + params.get("customerID"), "customerId", false);	
+				
 			boolean customerExists_customerTable = true;
+			boolean malformedJSON = false;
 			
-			if(customerExists_requestLogTable.compareTo("") == 0) {				
-				String custID = params.get("customerID");
-								
-				int valid_request = 0;
-				int invalid_request = 0;
-				
-				if(validRequest) {
-					valid_request = valid_request + 1;
-				}
-				else {
-					invalid_request = invalid_request + 1;
-				}
-										
-				
-				if(getQueryResult("customer", "id=" + params.get("customerID"), "name", false).length() > 0) {
-					logQuery = "INSERT INTO requestLog VALUES (" + custID + "," + valid_request + "," + invalid_request + ");";
-				}
-				else {
-					customerExists_customerTable = false;
-				}
+			if(custID == null) {
+				malformedJSON  = true;
 			}
-			else {				
-				String custID = params.get("customerID");
-				String update_column = "";
-				int update_count = -1;
+			else {
+				String customerExists_requestLogTable = getQueryResult("requestLog", "customerId=" + params.get("customerID"), "customerId", false);
 				
-				if(validRequest) {
-					update_column = "request_count";
-					update_count = Integer.parseInt(getQueryResult("requestLog", "customerId=" + params.get("customerID"), "request_count", false));
+				if(customerExists_requestLogTable.compareTo("") == 0) {												
+					int valid_request = 0;
+					int invalid_request = 0;
+					
+					if(validRequest) {
+						valid_request = valid_request + 1;
+					}
+					else {
+						invalid_request = invalid_request + 1;
+					}
+											
+					
+					if(getQueryResult("customer", "id=" + params.get("customerID"), "name", false).length() > 0) {
+						logQuery = "INSERT INTO requestLog VALUES (" + custID + "," + valid_request + "," + invalid_request + ");";
+					}
+					else {
+						customerExists_customerTable = false;
+					}
 				}
-				else {
-					update_column = "invalid_count";
-					update_count = Integer.parseInt(getQueryResult("requestLog", "customerId=" + params.get("customerID"), "invalid_count", false));
+				else {				
+					String update_column = "";
+					int update_count = -1;
+					
+					if(validRequest) {
+						update_column = "request_count";
+						update_count = Integer.parseInt(getQueryResult("requestLog", "customerId=" + params.get("customerID"), "request_count", false));
+					}
+					else {
+						update_column = "invalid_count";
+						update_count = Integer.parseInt(getQueryResult("requestLog", "customerId=" + params.get("customerID"), "invalid_count", false));
+					}
+					
+					if(update_column.compareTo("") != 0 && update_count >= 0) {
+						logQuery = "UPDATE requestLog SET " + update_column + "=" + (update_count + 1) + " WHERE customerID = " + custID + ";";
+					}
+					
 				}
-				
-				if(update_column.compareTo("") != 0 && update_count >= 0) {
-					logQuery = "UPDATE requestLog SET " + update_column + "=" + (update_count + 1) + " WHERE customerID = " + custID + ";";
-				}
-				
 			}
 			
 			if(logQuery.compareTo("") != 0) {
@@ -302,8 +318,8 @@ public class ServerAPI {
 		        	System.out.println("Request Log UnSuccessful");
 		        }
 			}
-			
-			return createResponseMessage(customerExists_customerTable, validRequest);
+						
+			return createResponseMessage(malformedJSON, customerExists_customerTable, validRequest);
 		}
 		catch (Exception e) 
 		{
